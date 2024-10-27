@@ -21,14 +21,15 @@ def get_weight(A, str):
     ci = (lamb - n) / (n - 1)  # Menghitung Consistency Index (CI)
     cr = ci / ri.get(n, float('inf'))  # Menghitung Consistency Ratio (CR)
 
-    # Output hasil
-    st.write("Vektor eigen yang telah dinormalisasi:")
-    st.write(w)
-    st.write('CR = %f' % cr)
+     # Output hasil
+    st.write("Vektor eigen yang telah dinormalisasi (Priority Vector):")
+    st.write(np.round(w, 4))  # Menampilkan dengan pembulatan
+    st.write('CR = %.4f' % cr)  # Menampilkan CR dengan pembulatan
     if cr > 0.1:
-        st.error("⚠️ Gagal pemeriksaan konsistensi pada " + str)
+        st.error(f"⚠️ Gagal pemeriksaan konsistensi pada {str_label}. Periksa kembali input perbandingan.")
 
     return w
+
 
 
 def plot_graph(x, y, ylabel, title):
