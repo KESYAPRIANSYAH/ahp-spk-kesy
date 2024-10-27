@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt  # Untuk perbandingan dan analisis grafis
 
 
 @st.cache_data
-def get_weight(A, str):
+def get_weight(A, str_label):
     n = A.shape[0]
     # Menghitung eigen value dan eigen vector
     e_vals, e_vecs = np.linalg.eig(A)
@@ -21,7 +21,7 @@ def get_weight(A, str):
     ci = (lamb - n) / (n - 1)  # Menghitung Consistency Index (CI)
     cr = ci / ri.get(n, float('inf'))  # Menghitung Consistency Ratio (CR)
 
-     # Output hasil
+    # Output hasil
     st.write("Vektor eigen yang telah dinormalisasi (Priority Vector):")
     st.write(np.round(w, 4))  # Menampilkan dengan pembulatan
     st.write('CR = %.4f' % cr)  # Menampilkan CR dengan pembulatan
@@ -31,16 +31,15 @@ def get_weight(A, str):
     return w
 
 
-
 def plot_graph(x, y, ylabel, title):
     # Membuat diagram batang horizontal
     fig, ax = plt.subplots()
-    ax.bar(y, x, color='#088eff')
+    ax.barh(y, x, color='#088eff')  # Perbaikan bar chart menjadi horizontal
     ax.set_facecolor('#F0F2F6')
     # Set judul dan label sumbu
     ax.set_title(title)
-    ax.set_xlabel(ylabel)
-    ax.set_ylabel("Nilai")
+    ax.set_xlabel("Nilai")
+    ax.set_ylabel(ylabel)
     return fig
 
 
@@ -67,7 +66,7 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     # Cetak Tabel Alternatif sesuai Kriteria
     for i in range(0, n):
         dfB = pd.DataFrame(B[i], index=alternatives, columns=alternatives)
-        st.markdown(" #### Tabel Alternatif untuk Kriteria " + criterias[i])
+        st.markdown(f" #### Tabel Alternatif untuk Kriteria {criterias[i]}")
         st.table(dfB)
 
     # Menghitung bobot kriteria
@@ -76,7 +75,7 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
 
     # Menghitung bobot alternatif untuk setiap kriteria
     for i in range(0, n):
-        w3 = get_weight(B[i], "Tabel Alternatif untuk Kriteria " + criterias[i])
+        w3 = get_weight(B[i], f"Tabel Alternatif untuk Kriteria {criterias[i]}")
         W3[i] = w3
 
     # Menghitung skor akhir untuk alternatif
@@ -97,38 +96,20 @@ def main():
     st.sidebar.info("""
     ### Petunjuk Pengisian AHP
     
-    Untuk mendapatkan hasil yang optimal dan konsisten, harap perhatikan langkah-langkah berikut saat mengisi nilai perbandingan:
-    
-    1. **Konsistensi**: Jika Kriteria A lebih penting dari Kriteria B, dan Kriteria B lebih penting dari Kriteria C, maka Kriteria A seharusnya jauh lebih penting daripada Kriteria C.
-    
+    1. **Konsistensi**: Harus konsisten antara perbandingan.
     2. **Skala Pengisian**: Gunakan skala **1 hingga 9**:
        - 1: Sama penting
        - 3: Sedikit lebih penting
        - 5: Lebih penting
        - 7: Sangat lebih penting
        - 9: Mutlak lebih penting
-    
-    3. **Perbandingan Simetris**: Jika Anda menilai Kriteria A lebih penting daripada Kriteria B, maka sebaliknya, nilai Kriteria B terhadap Kriteria A harus otomatis terbalik.
-       ### Penggunaan Nilai 2, 4, 6, dan 8:
-    - **Nilai 2**: Kriteria A sedikit lebih penting dari Kriteria B.
-    - **Nilai 4**: Kriteria A lebih penting dari Kriteria B, tetapi tidak terlalu jauh.
-    - **Nilai 6**: Kriteria A cukup lebih penting dari Kriteria B.
-    - **Nilai 8**: Kriteria A sangat lebih penting dibandingkan Kriteria B.                 
-
-
-    """
-                    
-                    
-                    )
+    """)
     
 
     cri = st.sidebar.text_input("Masukkan Kriteria")
     alt = st.sidebar.text_input("Masukkan Alternatif")
     criterias = cri.split(",")
     alternatives = alt.split(",")
-
-    st.sidebar.info("Masukkan beberapa nilai Kriteria & Alternatif, dipisahkan dengan koma tanpa spasi.")
-    st.sidebar.info("Contoh: Harga,Kualitas,Warna")
 
     if cri and alt:
         with st.expander("Bobot Kriteria"):
@@ -143,14 +124,14 @@ def main():
                     if i == j:
                         A[i][j] = 1
                     else:
-                        st.markdown(" ##### Kriteria " + criterias[i] + " dibandingkan dengan Kriteria " + criterias[j])
+                        st.markdown(f" ##### Kriteria {criterias[i]} dibandingkan dengan Kriteria {criterias[j]}")
                         criteriaradio = st.radio("Pilih kriteria yang lebih prioritas ", (criterias[i], criterias[j]), horizontal=True)
 
                         if criteriaradio == criterias[i]:
-                            A[i][j] = st.slider("Seberapa jauh " + criterias[i] + " lebih penting dibandingkan " + criterias[j] + " ?", min_value=1, max_value=9, value=1)
+                            A[i][j] = st.slider(f"Seberapa jauh {criterias[i]} lebih penting dibandingkan {criterias[j]} ?", 1, 9, 1)
                             A[j][i] = float(1/A[i][j])
                         else:
-                            A[j][i] = st.slider("Seberapa jauh " + criterias[j] + " lebih penting dibandingkan " + criterias[i] + " ?", min_value=1, max_value=9, value=1)
+                            A[j][i] = st.slider(f"Seberapa jauh {criterias[j]} lebih penting dibandingkan {criterias[i]} ?", 1, 9, 1)
                             A[i][j] = float(1/A[j][i])
 
         with st.expander("Bobot Alternatif"):
@@ -161,20 +142,20 @@ def main():
             # Input perbandingan berpasangan untuk alternatif berdasarkan setiap kriteria
             for k in range(0, n):
                 st.write("---")
-                st.markdown(" ##### Perbandingan Alternatif untuk Kriteria " + criterias[k])
+                st.markdown(f" ##### Perbandingan Alternatif untuk Kriteria {criterias[k]}")
 
                 for i in range(0, m):
                     for j in range(i, m):
                         if i == j:
                             B[k][i][j] = 1
                         else:
-                            alternativeradio = st.radio("Pilih alternatif yang lebih prioritas untuk kriteria " + criterias[k], (alternatives[i], alternatives[j]), horizontal=True)
+                            alternativeradio = st.radio(f"Pilih alternatif yang lebih prioritas untuk kriteria {criterias[k]}", (alternatives[i], alternatives[j]), horizontal=True)
 
                             if alternativeradio == alternatives[i]:
-                                B[k][i][j] = st.slider("Dengan mempertimbangkan Kriteria " + criterias[k] + ", seberapa jauh " + alternatives[i] + " lebih baik dibandingkan " + alternatives[j] + " ?", 1, 9, 1)
+                                B[k][i][j] = st.slider(f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[i]} lebih baik dibandingkan {alternatives[j]} ?", 1, 9, 1)
                                 B[k][j][i] = float(1/B[k][i][j])
                             else:
-                                B[k][j][i] = st.slider("Dengan mempertimbangkan Kriteria " + criterias[k] + ", seberapa jauh " + alternatives[j] + " lebih baik dibandingkan " + alternatives[i] + " ?", 1, 9, 1)
+                                B[k][j][i] = st.slider(f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[j]} lebih baik dibandingkan {alternatives[i]} ?", 1, 9, 1)
                                 B[k][i][j] = float(1/B[k][j][i])
 
         btn = st.button("Hitung AHP")
