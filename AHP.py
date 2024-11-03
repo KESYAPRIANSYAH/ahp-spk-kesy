@@ -82,7 +82,7 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
 
 
 def main():
-    st.set_page_config(page_title="Kalkulator AHP", page_icon=":bar_chart:")
+    st.set_page_config(page_title="Kalkulator AHP Untuk Menentukan Jenis Gamifikasi Pop-Up Campaign", page_icon=":bar_chart:")
     st.header("Kalkulator AHP")
     st.sidebar.title("Kriteria & Alternatif")
 
