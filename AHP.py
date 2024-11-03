@@ -77,7 +77,7 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     st.pyplot(plot_graph(W, alternatives, "Alternatif", "Alternatif Optimal untuk Kriteria yang Diberikan"))
     st.balloons()
 
-    # Menampilkan Hasil Akhir dengan Ranking di bagian paling bawah
+    # Menampilkan Hasil Akhir dengan Ranking 
     st.write("### Hasil Akhir AHP:")
     st.table(df_result[['Alternatif', 'Skor Akhir', 'Ranking']])
 
