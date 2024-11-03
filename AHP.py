@@ -69,17 +69,16 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     W = np.dot(W2, W3)
     
     df_result = pd.DataFrame({'Alternatif': alternatives, 'Skor Akhir': W})
-    df_result['Ranking'] = df_result['Skor Akhir'].rank(ascending=False, method='first').astype(int)
-    df_result = df_result.sort_values('Ranking')
+    df_result = df_result.sort_values('Skor Akhir', ascending=False)
 
     # Plot grafik hasil AHP
     st.pyplot(plot_graph(W2, criterias, "Kriteria", "Bobot Kriteria"))
     st.pyplot(plot_graph(W, alternatives, "Alternatif", "Alternatif Optimal untuk Kriteria yang Diberikan"))
     st.balloons()
 
-    # Menampilkan Hasil Akhir dengan Ranking di bagian paling bawah
+    # Menampilkan Hasil Akhir tanpa Ranking di bagian paling bawah
     st.write("### Hasil Akhir AHP:")
-    st.table(df_result[['Alternatif', 'Skor Akhir', 'Ranking']])
+    st.table(df_result[['Alternatif', 'Skor Akhir']])
 
 
 def main():
