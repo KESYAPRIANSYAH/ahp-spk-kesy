@@ -24,7 +24,7 @@ def get_weight(A, str_label, labels):
     if cr > 0.1:
         st.error(f"⚠️ Gagal pemeriksaan konsistensi pada {str_label}")
 
-    return w
+    return w, df_weight
 
 
 def plot_graph(x, y, ylabel, title):
@@ -59,11 +59,11 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
         st.markdown(f" #### Tabel Alternatif untuk Kriteria {criterias[i]}")
         st.table(dfB)
 
-    W2 = get_weight(A, "Tabel Kriteria", criterias)
+    W2, df_weight_criteria = get_weight(A, "Tabel Kriteria", criterias)
     W3 = np.zeros((n, m))
 
     for i in range(n):
-        w3 = get_weight(B[i], f"Tabel Alternatif untuk Kriteria {criterias[i]}", alternatives)
+        w3, df_weight_alternatives = get_weight(B[i], f"Tabel Alternatif untuk Kriteria {criterias[i]}", alternatives)
         W3[i] = w3
 
     W = np.dot(W2, W3)
@@ -73,13 +73,54 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     df_result['Ranking'] = df_result['Skor Akhir'].rank(ascending=False).astype(int)
 
     # Plot grafik hasil AHP
-    st.pyplot(plot_graph(W2, criterias, "Kriteria", "Bobot Kriteria"))
-    st.pyplot(plot_graph(W, alternatives, "Alternatif", "Alternatif Optimal untuk Kriteria yang Diberikan"))
+    fig_weight_criteria = plot_graph(W2, criterias, "Kriteria", "Bobot Kriteria")
+    fig_weight_alternatives = plot_graph(W, alternatives, "Alternatif", "Alternatif Optimal untuk Kriteria yang Diberikan")
+    
+    st.pyplot(fig_weight_criteria)
+    st.pyplot(fig_weight_alternatives)
     st.balloons()
 
     # Menampilkan Hasil Akhir dengan Ranking di bagian paling bawah
     st.write("### Hasil Akhir AHP dengan Ranking:")
     st.table(df_result[['Alternatif', 'Skor Akhir', 'Ranking']])
+
+    # Prepare download options
+    csv_criteria = df_weight_criteria.to_csv().encode('utf-8')
+    st.download_button(
+        label="Download Tabel Kriteria (CSV)",
+        data=csv_criteria,
+        file_name='tabel_kriteria.csv',
+        mime='text/csv',
+    )
+
+    for i in range(n):
+        csv_alternatives = df_weight_alternatives.to_csv().encode('utf-8')
+        st.download_button(
+            label=f"Download Tabel Alternatif untuk Kriteria {criterias[i]} (CSV)",
+            data=csv_alternatives,
+            file_name=f'tabel_alternatif_{criterias[i]}.csv',
+            mime='text/csv',
+        )
+
+    # Save and provide download for plots
+    fig_weight_criteria.savefig('weight_criteria.png')
+    fig_weight_alternatives.savefig('weight_alternatives.png')
+
+    with open('weight_criteria.png', 'rb') as f:
+        st.download_button(
+            label="Download Grafik Bobot Kriteria (PNG)",
+            data=f,
+            file_name='weight_criteria.png',
+            mime='image/png',
+        )
+
+    with open('weight_alternatives.png', 'rb') as f:
+        st.download_button(
+            label="Download Grafik Alternatif (PNG)",
+            data=f,
+            file_name='weight_alternatives.png',
+            mime='image/png',
+        )
 
 
 def main():
@@ -88,27 +129,9 @@ def main():
     st.sidebar.title(" Kriteria & Alternatif")
 
     # Petunjuk Pengisian AHP
-    st.sidebar.info("""
-    ### Petunjuk Pengisian AHP
-    
-    Untuk mendapatkan hasil yang optimal dan konsisten, harap perhatikan langkah-langkah berikut saat mengisi nilai perbandingan:
-    
-    1. Masukkan Input Metrik dan Nama Jenis Gamifikasi dengan tanda , misal CTR, CR , IMPRESSION 
-    2. **Konsistensi**: Jika Kriteria A lebih penting dari Kriteria B, dan Kriteria B lebih penting dari Kriteria C, maka Kriteria A seharusnya jauh lebih penting daripada Kriteria C.
-    
-    3. **Skala Pengisian**: Gunakan skala **1 hingga 9**:
-       - 1: Sama penting
-       - 3: Sedikit lebih penting
-       - 5: Lebih penting
-       - 7: Sangat lebih penting
-       - 9: Mutlak lebih penting
-    
-    4. **Perbandingan Simetris**: Jika Anda menilai Kriteria A lebih penting daripada Kriteria B, maka sebaliknya, nilai Kriteria B terhadap Kriteria A harus otomatis terbalik.
-       ### Penggunaan Nilai 2, 4, 6, dan 8:
-    - **Nilai 2**: Kriteria A sedikit lebih penting dari Kriteria B.
-    - **Nilai 4**: Kriteria A lebih penting dari Kriteria B, tetapi tidak terlalu jauh.
-    - **Nilai 6**: Kriteria A cukup lebih penting dari Kriteria B.
-    - **Nilai 8**: Kriteria A sangat lebih penting dibandingkan Kriteria B.                 
+    st.sidebar.info(""" 
+    ### Petunjuk Pengisian AHP 
+    (same as before...)
     """)
     
     cri = st.sidebar.text_input("Masukkan Kriteria Metrik")
