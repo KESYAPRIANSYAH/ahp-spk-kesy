@@ -19,15 +19,12 @@ def get_weight(A, str_label, labels):
     st.write(f"### Vektor Eigen yang Dinormalisasi untuk {str_label}:")
     df_weight = pd.DataFrame(w, columns=['Bobot'], index=labels)
     st.table(df_weight)
-    
-    # Add download button for the weights table
-    st.download_button("Download Bobot Kriteria", df_weight.to_csv().encode('utf-8'), "bobot_kriteria.csv", "text/csv")
 
     st.write('CR = %f' % cr)
     if cr > 0.1:
         st.error(f"⚠️ Gagal pemeriksaan konsistensi pada {str_label}")
 
-    return w
+    return w, df_weight  # Return the weight and DataFrame
 
 def plot_graph(x, y, ylabel, title):
     fig, ax = plt.subplots()
@@ -45,32 +42,18 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
             if i != j:
                 A[j][i] = float(1 / A[i][j])
     dfA = pd.DataFrame(A, index=criterias, columns=criterias)
-    st.markdown(" #### Tabel Kriteria")
-    st.table(dfA)
-
-    # Add download button for criteria matrix
-    st.download_button("Download Tabel Kriteria", dfA.to_csv().encode('utf-8'), "tabel_kriteria.csv", "text/csv")
 
     for k in range(n):
         for i in range(m):
             for j in range(i, m):
                 if i != j:
                     B[k][j][i] = float(1 / B[k][i][j])
-    st.write("---")
 
-    for i in range(n):
-        dfB = pd.DataFrame(B[i], index=alternatives, columns=alternatives)
-        st.markdown(f" #### Tabel Alternatif untuk Kriteria {criterias[i]}")
-        st.table(dfB)
-
-        # Add download button for each alternatives matrix
-        st.download_button(f"Download Tabel Alternatif untuk Kriteria {criterias[i]}", dfB.to_csv().encode('utf-8'), f"tabel_alternatif_{criterias[i]}.csv", "text/csv")
-
-    W2 = get_weight(A, "Tabel Kriteria", criterias)
+    W2, df_weights = get_weight(A, "Tabel Kriteria", criterias)
     W3 = np.zeros((n, m))
 
     for i in range(n):
-        w3 = get_weight(B[i], f"Tabel Alternatif untuk Kriteria {criterias[i]}", alternatives)
+        w3, _ = get_weight(B[i], f"Tabel Alternatif untuk Kriteria {criterias[i]}", alternatives)
         W3[i] = w3
 
     W = np.dot(W2, W3)
@@ -84,12 +67,7 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     st.pyplot(plot_graph(W, alternatives, "Alternatif", "Alternatif Optimal untuk Kriteria yang Diberikan"))
     st.balloons()
 
-    # Menampilkan Hasil Akhir dengan Ranking di bagian paling bawah
-    st.write("### Hasil Akhir AHP dengan Ranking:")
-    st.table(df_result[['Alternatif', 'Skor Akhir', 'Ranking']])
-    
-    # Add download button for final results
-    st.download_button("Download Hasil Akhir AHP", df_result.to_csv().encode('utf-8'), "hasil_akhir_ahp.csv", "text/csv")
+    return dfA, W2, W, df_result  # Return the results for download
 
 def main():
     st.set_page_config(page_title="Kalkulator AHP ", page_icon=":bar_chart:")
@@ -173,7 +151,12 @@ def main():
         st.write("##")
 
         if btn:
-            calculate_ahp(A, B, n, m, criterias, alternatives)
+            dfA, W2, W, df_result = calculate_ahp(A, B, n, m, criterias, alternatives)
+
+            # Download buttons after calculations
+            st.download_button("Download Tabel Kriteria", dfA.to_csv().encode('utf-8'), "tabel_kriteria.csv", "text/csv")
+            st.download_button("Download Bobot Kriteria", pd.DataFrame(W2, index=criterias, columns=['Bobot']).to_csv().encode('utf-8'), "bobot_kriteria.csv", "text/csv")
+            st.download_button("Download Hasil Akhir AHP", df_result.to_csv().encode('utf-8'), "hasil_akhir_ahp.csv", "text/csv")
 
 if __name__ == '__main__':
     main()
