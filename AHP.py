@@ -17,7 +17,7 @@ def get_weight(A, str_label, labels):
     cr = ci / ri.get(n, float('inf'))
     
     st.write(f"### Vektor Eigen yang Dinormalisasi untuk {str_label}:")
-    df_weight = pd.DataFrame(w, columns=['Bobot'], index=l
+    df_weight = pd.DataFrame(w, columns=['Bobot'], index=labels)
     st.table(df_weight)
     
     st.write('CR = %f' % cr)
@@ -78,8 +78,8 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     st.balloons()
 
     # Menampilkan Hasil Akhir dengan Ranking di bagian paling bawah
-  st.write("### Hasil Akhir AHP dengan Ranking:")
-  st.table(df_result[['Alternatif', 'Skor Akhir', 'Ranking']].style.hide_index())
+    st.write("### Hasil Akhir AHP dengan Ranking:")
+    st.table(df_result[['Alternatif', 'Skor Akhir', 'Ranking']])
 
 
 def main():
