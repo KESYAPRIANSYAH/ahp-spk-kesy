@@ -20,12 +20,14 @@ def get_weight(A, str_label, labels):
     df_weight = pd.DataFrame(w, columns=['Bobot'], index=labels)
     st.table(df_weight)
     
+    # Add download button for the weights table
+    st.download_button("Download Bobot Kriteria", df_weight.to_csv().encode('utf-8'), "bobot_kriteria.csv", "text/csv")
+
     st.write('CR = %f' % cr)
     if cr > 0.1:
         st.error(f"⚠️ Gagal pemeriksaan konsistensi pada {str_label}")
 
     return w
-
 
 def plot_graph(x, y, ylabel, title):
     fig, ax = plt.subplots()
@@ -36,7 +38,6 @@ def plot_graph(x, y, ylabel, title):
     ax.set_ylabel("Nilai")
     return fig
 
-
 @st.cache_data
 def calculate_ahp(A, B, n, m, criterias, alternatives):
     for i in range(n):
@@ -46,6 +47,9 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     dfA = pd.DataFrame(A, index=criterias, columns=criterias)
     st.markdown(" #### Tabel Kriteria")
     st.table(dfA)
+
+    # Add download button for criteria matrix
+    st.download_button("Download Tabel Kriteria", dfA.to_csv().encode('utf-8'), "tabel_kriteria.csv", "text/csv")
 
     for k in range(n):
         for i in range(m):
@@ -58,6 +62,9 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
         dfB = pd.DataFrame(B[i], index=alternatives, columns=alternatives)
         st.markdown(f" #### Tabel Alternatif untuk Kriteria {criterias[i]}")
         st.table(dfB)
+
+        # Add download button for each alternatives matrix
+        st.download_button(f"Download Tabel Alternatif untuk Kriteria {criterias[i]}", dfB.to_csv().encode('utf-8'), f"tabel_alternatif_{criterias[i]}.csv", "text/csv")
 
     W2 = get_weight(A, "Tabel Kriteria", criterias)
     W3 = np.zeros((n, m))
@@ -80,7 +87,9 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     # Menampilkan Hasil Akhir dengan Ranking di bagian paling bawah
     st.write("### Hasil Akhir AHP dengan Ranking:")
     st.table(df_result[['Alternatif', 'Skor Akhir', 'Ranking']])
-
+    
+    # Add download button for final results
+    st.download_button("Download Hasil Akhir AHP", df_result.to_csv().encode('utf-8'), "hasil_akhir_ahp.csv", "text/csv")
 
 def main():
     st.set_page_config(page_title="Kalkulator AHP ", page_icon=":bar_chart:")
@@ -88,7 +97,7 @@ def main():
     st.sidebar.title(" Kriteria & Alternatif")
 
     # Petunjuk Pengisian AHP
-    st.sidebar.info("""
+    st.sidebar.info(""" 
     ### Petunjuk Pengisian AHP
     
     Untuk mendapatkan hasil yang optimal dan konsisten, harap perhatikan langkah-langkah berikut saat mengisi nilai perbandingan:
@@ -165,7 +174,6 @@ def main():
 
         if btn:
             calculate_ahp(A, B, n, m, criterias, alternatives)
-
 
 if __name__ == '__main__':
     main()
