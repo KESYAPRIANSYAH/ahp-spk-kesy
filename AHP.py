@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 @st.cache_data
-def get_weight(A, str_label):
+def get_weight(A, str_label, labels):
     n = A.shape[0]
     e_vals, e_vecs = np.linalg.eig(A)
     lamb = np.max(np.real(e_vals))
@@ -17,7 +17,7 @@ def get_weight(A, str_label):
     cr = ci / ri.get(n, float('inf'))
     
     st.write(f"### Vektor Eigen yang Dinormalisasi untuk {str_label}:")
-    df_weight = pd.DataFrame(w, columns=['Bobot'])
+    df_weight = pd.DataFrame(w, columns=['Bobot'], index=labels)
     st.table(df_weight)
     
     st.write('CR = %f' % cr)
@@ -59,26 +59,27 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
         st.markdown(f" #### Tabel Alternatif untuk Kriteria {criterias[i]}")
         st.table(dfB)
 
-    W2 = get_weight(A, "Tabel Kriteria")
+    W2 = get_weight(A, "Tabel Kriteria", criterias)
     W3 = np.zeros((n, m))
 
     for i in range(n):
-        w3 = get_weight(B[i], f"Tabel Alternatif untuk Kriteria {criterias[i]}")
+        w3 = get_weight(B[i], f"Tabel Alternatif untuk Kriteria {criterias[i]}", alternatives)
         W3[i] = w3
 
     W = np.dot(W2, W3)
     
     df_result = pd.DataFrame({'Alternatif': alternatives, 'Skor Akhir': W})
-    df_result = df_result.sort_values('Skor Akhir', ascending=False)
+    df_result = df_result.sort_values('Skor Akhir', ascending=False).reset_index(drop=True)
+    df_result['Ranking'] = df_result['Skor Akhir'].rank(ascending=False).astype(int)
 
     # Plot grafik hasil AHP
     st.pyplot(plot_graph(W2, criterias, "Kriteria", "Bobot Kriteria"))
     st.pyplot(plot_graph(W, alternatives, "Alternatif", "Alternatif Optimal untuk Kriteria yang Diberikan"))
     st.balloons()
 
-    # Menampilkan Hasil Akhir tanpa Ranking di bagian paling bawah
-    st.write("### Hasil Akhir AHP:")
-    st.table(df_result[['Alternatif', 'Skor Akhir']])
+    # Menampilkan Hasil Akhir dengan Ranking di bagian paling bawah
+    st.write("### Hasil Akhir AHP dengan Ranking:")
+    st.table(df_result[['Alternatif', 'Skor Akhir', 'Ranking']])
 
 
 def main():
@@ -92,7 +93,7 @@ def main():
     
     Untuk mendapatkan hasil yang optimal dan konsisten, harap perhatikan langkah-langkah berikut saat mengisi nilai perbandingan:
     
-    1. Masuikan Input Metrik dan Nama Jenis Gamifikasi dengan tanda , misal CTR, CR , IMPRESSION 
+    1. Masukkan Input Metrik dan Nama Jenis Gamifikasi dengan tanda , misal CTR, CR , IMPRESSION 
     2. **Konsistensi**: Jika Kriteria A lebih penting dari Kriteria B, dan Kriteria B lebih penting dari Kriteria C, maka Kriteria A seharusnya jauh lebih penting daripada Kriteria C.
     
     3. **Skala Pengisian**: Gunakan skala **1 hingga 9**:
