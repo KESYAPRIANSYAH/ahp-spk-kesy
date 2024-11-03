@@ -18,7 +18,6 @@ def get_weight(A, str_label):
     
     st.write(f"### Vektor Eigen yang Dinormalisasi untuk {str_label}:")
     df_weight = pd.DataFrame(w, columns=['Bobot'])
-    df_weight['Ranking'] = df_weight['Bobot'].rank(ascending=False, method='min')
     st.table(df_weight)
     
     st.write('CR = %f' % cr)
