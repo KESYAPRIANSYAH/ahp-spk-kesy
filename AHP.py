@@ -92,16 +92,17 @@ def main():
     
     Untuk mendapatkan hasil yang optimal dan konsisten, harap perhatikan langkah-langkah berikut saat mengisi nilai perbandingan:
     
-    1. **Konsistensi**: Jika Kriteria A lebih penting dari Kriteria B, dan Kriteria B lebih penting dari Kriteria C, maka Kriteria A seharusnya jauh lebih penting daripada Kriteria C.
+    1. Masuikan Input Metrik dan Nama Jenis Gamifikasi dengan tanda , misal CTR, CR , IMPRESSION 
+    2. **Konsistensi**: Jika Kriteria A lebih penting dari Kriteria B, dan Kriteria B lebih penting dari Kriteria C, maka Kriteria A seharusnya jauh lebih penting daripada Kriteria C.
     
-    2. **Skala Pengisian**: Gunakan skala **1 hingga 9**:
+    3. **Skala Pengisian**: Gunakan skala **1 hingga 9**:
        - 1: Sama penting
        - 3: Sedikit lebih penting
        - 5: Lebih penting
        - 7: Sangat lebih penting
        - 9: Mutlak lebih penting
     
-    3. **Perbandingan Simetris**: Jika Anda menilai Kriteria A lebih penting daripada Kriteria B, maka sebaliknya, nilai Kriteria B terhadap Kriteria A harus otomatis terbalik.
+    4. **Perbandingan Simetris**: Jika Anda menilai Kriteria A lebih penting daripada Kriteria B, maka sebaliknya, nilai Kriteria B terhadap Kriteria A harus otomatis terbalik.
        ### Penggunaan Nilai 2, 4, 6, dan 8:
     - **Nilai 2**: Kriteria A sedikit lebih penting dari Kriteria B.
     - **Nilai 4**: Kriteria A lebih penting dari Kriteria B, tetapi tidak terlalu jauh.
@@ -109,8 +110,8 @@ def main():
     - **Nilai 8**: Kriteria A sangat lebih penting dibandingkan Kriteria B.                 
     """)
     
-    cri = st.sidebar.text_input("Masukkan Kriteria")
-    alt = st.sidebar.text_input("Masukkan Alternatif")
+    cri = st.sidebar.text_input("Masukkan Kriteria Metrik")
+    alt = st.sidebar.text_input("Masukkan Alternatif Jenis Gamifikasi")
     criterias = cri.split(",")
     alternatives = alt.split(",")
 
