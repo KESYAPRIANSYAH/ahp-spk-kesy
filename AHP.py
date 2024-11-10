@@ -255,29 +255,26 @@ def main():
                 save_response(name, A, B, criterias, alternatives, W)
                 st.success("Data berhasil disimpan!")
     
-    with tab2:
+     with tab2:
         st.subheader("Analisis Multi-Responden")
         
         # Display all responses
-      if st.session_state.responses:
-    st.write("### Daftar Responden:")
-    for idx, resp in enumerate(st.session_state.responses):
-        with st.expander(f"Responden: {resp['name']} - {resp['timestamp']}"):
-            col1, col2 = st.columns([3,1])
-            with col1:
-                st.write("Skor Akhir:")
-                df_result = pd.DataFrame({
-                    'Alternatif': resp['alternatives_list'],
-                    'Skor': resp['final_scores']
-                })
-                st.table(df_result)
-            with col2:
-                if st.button("Hapus Data", key=f"delete_{idx}"):
-                    delete_response(idx)
-                    st.rerun()
-
-
-                    
+        if st.session_state.responses:
+            st.write("### Daftar Responden:")
+            for idx, resp in enumerate(st.session_state.responses):
+                with st.expander(f"Responden: {resp['name']} - {resp['timestamp']}"):
+                    col1, col2 = st.columns([3,1])
+                    with col1:
+                        st.write("Skor Akhir:")
+                        df_result = pd.DataFrame({
+                            'Alternatif': resp['alternatives_list'],
+                            'Skor': resp['final_scores']
+                        })
+                        st.table(df_result)
+                    with col2:
+                        if st.button("Hapus Data", key=f"delete_{idx}"):
+                            delete_response(idx)
+                            st.rerun()
             
             # Calculate and display average scores
             avg_scores = calculate_average_scores(st.session_state.responses, alternatives)
