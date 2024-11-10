@@ -11,14 +11,13 @@ if 'responses' not in st.session_state:
     st.session_state.responses = []
 
 # Save response to session state
-def save_response(respondent_name, respondent_role, A, B, W, criterias, alternatives):
+def save_response(respondent_name, A, B, W, criterias, alternatives):
     """
     Save the respondent's input data, including criteria and alternative weights,
     into the session state and CSV file.
     """
     response_data = {
         'respondent_name': str(respondent_name),
-        'respondent_role': str(respondent_role),
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'criteria_data': A.tolist(),
         'alternative_data': B.tolist(),
@@ -41,7 +40,6 @@ def save_to_csv():
         for response in st.session_state.responses:
             row_data = {
                 'respondent_name': response['respondent_name'],
-                'respondent_role': response['respondent_role'],
                 'timestamp': response['timestamp'],
                 'criteria_data': json.dumps(response['criteria_data']),
                 'alternative_data': json.dumps(response['alternative_data']),
@@ -65,7 +63,6 @@ def load_from_csv():
         for index, row in df.iterrows():
             response_data = {
                 'respondent_name': str(row['respondent_name']),
-                'respondent_role': str(row['respondent_role']),
                 'timestamp': str(row['timestamp']),
                 'criteria_data': json.loads(row['criteria_data']),
                 'alternative_data': json.loads(row['alternative_data']),
@@ -189,10 +186,8 @@ def main():
     with tab1:
         st.sidebar.title("Kriteria & Alternatif")
         
-        # Add respondent information fields
+        # Add respondent information field
         respondent_name = st.text_input("Nama Responden")
-        respondent_role = st.selectbox("Peran/Jabatan", 
-            ["Manager", "Supervisor", "Staff", "Analyst", "Other"])
         
         st.sidebar.info("""
         ### Petunjuk Pengisian AHP
@@ -286,7 +281,7 @@ def main():
                     W, W2, W3 = calculate_ahp(A, B, n, m, criterias, alternatives)
                     
                     # Save response
-                    save_response(respondent_name, respondent_role, A, B, W, criterias, alternatives)
+                    save_response(respondent_name, A, B, W, criterias, alternatives)
                     
                     # Show results
                     df_result = pd.DataFrame({
@@ -312,7 +307,6 @@ def main():
             resp_df = pd.DataFrame([
                 {
                     'Nama': r['respondent_name'],
-                    'Peran': r['respondent_role'],
                     'Waktu': r['timestamp']
                 }
                 for r in st.session_state.responses
