@@ -9,27 +9,35 @@ import json
 if 'responses' not in st.session_state:
     st.session_state.responses = []
 
-# Save response to session state
-def save_response(name, A, B, criterias, alternatives, final_scores):
+# Save response to session state and CSV
+def save_response(name, email, A, B, criterias, alternatives, final_scores):
     response_data = {
         'name': name,
+        'email': email,
         'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         'criteria_matrix': A.tolist(),
         'alternatives_matrix': B.tolist(),
         'criteria_list': criterias,
         'alternatives_list': alternatives,
-        'final_scores': final_scores.tolist(),
-        'id': len(st.session_state.responses)  # Add unique ID for deletion
+        'final_scores': final_scores.tolist()
     }
     
     # Add to session state
     if 'responses' not in st.session_state:
         st.session_state.responses = []
     st.session_state.responses.append(response_data)
-
-# Delete response by ID
-def delete_response(response_id):
-    st.session_state.responses = [r for r in st.session_state.responses if r['id'] != response_id]
+    
+    # Convert to DataFrame and save to CSV
+    try:
+        # Read existing CSV if it exists
+        df_existing = pd.read_csv('responses.csv')
+        df_new = pd.DataFrame([response_data])
+        df_combined = pd.concat([df_existing, df_new], ignore_index=True)
+        df_combined.to_csv('responses.csv', index=False)
+    except FileNotFoundError:
+        # Create new CSV if it doesn't exist
+        df = pd.DataFrame([response_data])
+        df.to_csv('responses.csv', index=False)
 
 # Calculate average scores across all respondents
 def calculate_average_scores(responses, alternatives):
@@ -73,51 +81,8 @@ def plot_graph(x, y, ylabel, title):
     plt.xticks(rotation=45)
     return fig
 
-def display_detailed_matrices(resp):
-    """Display detailed matrices for a single respondent"""
-    # Display Criteria Matrix
-    st.write("#### Tabel Kriteria")
-    criteria_matrix = np.array(resp['criteria_matrix'])
-    df_criteria = pd.DataFrame(
-        criteria_matrix,
-        index=resp['criteria_list'],
-        columns=resp['criteria_list']
-    )
-    st.table(df_criteria)
-
-    # Display Alternative Matrices for each criterion
-    alternatives_matrix = np.array(resp['alternatives_matrix'])
-    for i, criterion in enumerate(resp['criteria_list']):
-        st.write(f"#### Tabel Alternatif untuk Kriteria {criterion}")
-        df_alt = pd.DataFrame(
-            alternatives_matrix[i],
-            index=resp['alternatives_list'],
-            columns=resp['alternatives_list']
-        )
-        st.table(df_alt)
-
-def display_results_and_charts(resp):
-    """Display final scores and charts for a single respondent"""
-    st.write("#### Hasil Akhir")
-    df_result = pd.DataFrame({
-        'Alternatif': resp['alternatives_list'],
-        'Skor': resp['final_scores']
-    })
-    df_result['Ranking'] = df_result['Skor'].rank(ascending=False).astype(int)
-    df_result = df_result.sort_values('Skor', ascending=False)
-    st.table(df_result)
-
-    # Plot bar chart for final scores
-    fig, ax = plt.subplots(figsize=(8, 4))
-    ax.bar(df_result['Alternatif'], df_result['Skor'], color='#088eff')
-    ax.set_title("Skor Akhir Alternatif")
-    ax.set_xlabel("Alternatif")
-    ax.set_ylabel("Skor")
-    plt.xticks(rotation=45)
-    st.pyplot(fig)
 @st.cache_data
 def calculate_ahp(A, B, n, m, criterias, alternatives):
-    # Calculate criteria matrix
     for i in range(n):
         for j in range(i, n):
             if i != j:
@@ -126,7 +91,6 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     st.markdown(" #### Tabel Kriteria")
     st.table(dfA)
 
-    # Calculate alternatives matrix
     for k in range(n):
         for i in range(m):
             for j in range(i, m):
@@ -139,7 +103,6 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
         st.markdown(f" #### Tabel Alternatif untuk Kriteria {criterias[i]}")
         st.table(dfB)
 
-    # Calculate weights
     W2 = get_weight(A, "Tabel Kriteria", criterias)
     W3 = np.zeros((n, m))
 
@@ -147,27 +110,25 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
         w3 = get_weight(B[i], f"Tabel Alternatif untuk Kriteria {criterias[i]}", alternatives)
         W3[i] = w3
 
-    # Calculate final scores
     W = np.dot(W2, W3)
     
-    # Create results DataFrame
     df_result = pd.DataFrame({'Alternatif': alternatives, 'Skor Akhir': W})
     df_result = df_result.sort_values('Skor Akhir', ascending=False).reset_index(drop=True)
     df_result['Ranking'] = df_result['Skor Akhir'].rank(ascending=False).astype(int)
 
-    # Plot graphs
+    # Plot grafik hasil AHP
     st.pyplot(plot_graph(W2, criterias, "Kriteria", "Bobot Kriteria"))
     st.pyplot(plot_graph(W, alternatives, "Alternatif", "Alternatif Optimal untuk Kriteria yang Diberikan"))
     st.balloons()
 
-    # Display final results
+    # Menampilkan Hasil Akhir dengan Ranking
     st.write("### Hasil Akhir AHP dengan Ranking:")
     st.table(df_result[['Alternatif', 'Skor Akhir', 'Ranking']])
     
     return W
 
 def main():
-    st.set_page_config(page_title="Kalkulator AHP Multi-Responden", page_icon=":bar_chart:", layout="wide")
+    st.set_page_config(page_title="Kalkulator AHP Multi-Responden", page_icon=":bar_chart:")
     st.header("Kalkulator AHP Untuk Menentukan Jenis Gamifikasi Pop-Up Campaign")
     
     # Add tabs for input and analysis
@@ -177,6 +138,7 @@ def main():
         # Respondent Information
         st.subheader("Informasi Responden")
         name = st.text_input("Nama Lengkap")
+        email = st.text_input("Email")
         
         st.sidebar.title("Kriteria & Alternatif")
         
@@ -209,7 +171,7 @@ def main():
         criterias = cri.split(",") if cri else []
         alternatives = alt.split(",") if alt else []
 
-        if cri and alt and name:
+        if cri and alt and name and email:
             with st.expander("Bobot Kriteria"):
                 st.subheader("Perbandingan Berpasangan untuk Kriteria")
                 n = len(criterias)
@@ -280,79 +242,44 @@ def main():
 
             if btn:
                 W = calculate_ahp(A, B, n, m, criterias, alternatives)
-                save_response(name, A, B, criterias, alternatives, W)
-                st.success(f"Data untuk responden {name} berhasil disimpan!")
-with tab2:
+                save_response(name, email, A, B, criterias, alternatives, W)
+                st.success("Data berhasil disimpan!")
+    
+    with tab2:
         st.subheader("Analisis Multi-Responden")
         
+        # Display all responses
         if st.session_state.responses:
-            # Add download button for all responses
-            df_download = pd.DataFrame([{
-                'Nama': r['name'],
-                'Waktu': r['timestamp'],
-                'Kriteria': ', '.join(r['criteria_list']),
-                'Alternatif': ', '.join(r['alternatives_list']),
-                'Skor': ', '.join([str(s) for s in r['final_scores']])
-            } for r in st.session_state.responses])
-            
-            csv = df_download.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                "Download Semua Data (CSV)",
-                csv,
-                "ahp_responses.csv",
-                "text/csv",
-                key='download-csv'
-            )
-
-            # Display aggregate analysis
-            st.write("### Analisis Agregat")
-            if len(st.session_state.responses) > 0:
-                # Get the latest response for criteria and alternatives list
-                latest_resp = st.session_state.responses[-1]
-                alternatives = latest_resp['alternatives_list']
-                
-                # Calculate average scores
-                avg_scores = calculate_average_scores(st.session_state.responses, alternatives)
-                if avg_scores is not None:
-                    col1, col2 = st.columns([1, 2])
-                    
-                    with col1:
-                        st.write("#### Rata-rata Skor Semua Responden")
-                        df_avg = pd.DataFrame({
-                            'Alternatif': alternatives,
-                            'Rata-rata Skor': avg_scores
-                        })
-                        df_avg = df_avg.sort_values('Rata-rata Skor', ascending=False)
-                        df_avg['Ranking'] = df_avg['Rata-rata Skor'].rank(ascending=False).astype(int)
-                        st.table(df_avg)
-                    
-                    with col2:
-                        # Plot average scores
-                        fig, ax = plt.subplots(figsize=(10, 5))
-                        ax.bar(df_avg['Alternatif'], df_avg['Rata-rata Skor'], color='#088eff')
-                        ax.set_title("Rata-rata Skor Alternatif dari Semua Responden")
-                        ax.set_xlabel("Alternatif")
-                        ax.set_ylabel("Rata-rata Skor")
-                        plt.xticks(rotation=45)
-                        st.pyplot(fig)
-
-            # Display individual responses
-            st.write("### Analisis Per Responden")
+            st.write("### Daftar Responden:")
             for resp in st.session_state.responses:
                 with st.expander(f"Responden: {resp['name']} - {resp['timestamp']}"):
-                    tab_results, tab_matrices = st.tabs(["Hasil Akhir", "Matriks Detail"])
-                    
-                    with tab_results:
-                        display_results_and_charts(resp)
-                    
-                    with tab_matrices:
-                        display_detailed_matrices(resp)
-                    
-                    # Add delete button
-                    if st.button(f"Hapus Data {resp['name']}", key=f"delete_{resp['id']}"):
-                        delete_response(resp['id'])
-                        st.success(f"Data {resp['name']} berhasil dihapus!")
-                        st.experimental_rerun()
+                    st.write(f"Email: {resp['email']}")
+                    st.write("Skor Akhir:")
+                    df_result = pd.DataFrame({
+                        'Alternatif': resp['alternatives_list'],
+                        'Skor': resp['final_scores']
+                    })
+                    st.table(df_result)
+            
+            # Calculate and display average scores
+            avg_scores = calculate_average_scores(st.session_state.responses, alternatives)
+            if avg_scores is not None and alternatives:
+                st.write("### Rata-rata Skor Semua Responden:")
+                df_avg = pd.DataFrame({
+                    'Alternatif': alternatives,
+                    'Rata-rata Skor': avg_scores
+                })
+                df_avg = df_avg.sort_values('Rata-rata Skor', ascending=False)
+                st.table(df_avg)
+                
+                # Plot average scores
+                fig, ax = plt.subplots()
+                ax.bar(df_avg['Alternatif'], df_avg['Rata-rata Skor'], color='#088eff')
+                ax.set_title("Rata-rata Skor Alternatif dari Semua Responden")
+                ax.set_xlabel("Alternatif")
+                ax.set_ylabel("Rata-rata Skor")
+                plt.xticks(rotation=45)
+                st.pyplot(fig)
         else:
             st.info("Belum ada data responden yang tersimpan.")
 
