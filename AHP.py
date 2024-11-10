@@ -2,9 +2,13 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from collections import defaultdict
+
+# Dictionary to store responses from multiple users
+user_responses = defaultdict(list)
 
 @st.cache_data
-def get_weight(A, str_label, labels):
+def get_weight(A, str_label, labels, user_id):
     n = A.shape[0]
     e_vals, e_vecs = np.linalg.eig(A)
     lamb = np.max(np.real(e_vals))
@@ -16,16 +20,15 @@ def get_weight(A, str_label, labels):
     ci = (lamb - n) / (n - 1)
     cr = ci / ri.get(n, float('inf'))
     
-    st.write(f"### Vektor Eigen yang Dinormalisasi untuk {str_label}:")
+    st.write(f"### Vektor Eigen yang Dinormalisasi untuk {str_label} (User {user_id}):")
     df_weight = pd.DataFrame(w, columns=['Bobot'], index=labels)
     st.table(df_weight)
     
     st.write('CR = %f' % cr)
     if cr > 0.1:
-        st.error(f"⚠️ Gagal pemeriksaan konsistensi pada {str_label}")
+        st.error(f"⚠️ Gagal pemeriksaan konsistensi pada {str_label} (User {user_id})")
 
     return w
-
 
 def plot_graph(x, y, ylabel, title):
     fig, ax = plt.subplots()
@@ -36,15 +39,14 @@ def plot_graph(x, y, ylabel, title):
     ax.set_ylabel("Nilai")
     return fig
 
-
 @st.cache_data
-def calculate_ahp(A, B, n, m, criterias, alternatives):
+def calculate_ahp(A, B, n, m, criterias, alternatives, user_id):
     for i in range(n):
         for j in range(i, n):
             if i != j:
                 A[j][i] = float(1 / A[i][j])
     dfA = pd.DataFrame(A, index=criterias, columns=criterias)
-    st.markdown(" #### Tabel Kriteria")
+    st.markdown(f" #### Tabel Kriteria (User {user_id})")
     st.table(dfA)
 
     for k in range(n):
@@ -56,14 +58,14 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
 
     for i in range(n):
         dfB = pd.DataFrame(B[i], index=alternatives, columns=alternatives)
-        st.markdown(f" #### Tabel Alternatif untuk Kriteria {criterias[i]}")
+        st.markdown(f" #### Tabel Alternatif untuk Kriteria {criterias[i]} (User {user_id})")
         st.table(dfB)
 
-    W2 = get_weight(A, "Tabel Kriteria", criterias)
+    W2 = get_weight(A, "Tabel Kriteria", criterias, user_id)
     W3 = np.zeros((n, m))
 
     for i in range(n):
-        w3 = get_weight(B[i], f"Tabel Alternatif untuk Kriteria {criterias[i]}", alternatives)
+        w3 = get_weight(B[i], f"Tabel Alternatif untuk Kriteria {criterias[i]}", alternatives, user_id)
         W3[i] = w3
 
     W = np.dot(W2, W3)
@@ -73,14 +75,29 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     df_result['Ranking'] = df_result['Skor Akhir'].rank(ascending=False).astype(int)
 
     # Plot grafik hasil AHP
-    st.pyplot(plot_graph(W2, criterias, "Kriteria", "Bobot Kriteria"))
-    st.pyplot(plot_graph(W, alternatives, "Alternatif", "Alternatif Optimal untuk Kriteria yang Diberikan"))
+    st.pyplot(plot_graph(W2, criterias, "Kriteria", f"Bobot Kriteria (User {user_id})"))
+    st.pyplot(plot_graph(W, alternatives, "Alternatif", f"Alternatif Optimal untuk Kriteria yang Diberikan (User {user_id})"))
     st.balloons()
 
+    # Menyimpan hasil perhitungan AHP untuk user saat ini
+    user_responses[user_id].append({
+        "comparison_matrix_A": A,
+        "comparison_matrix_B": B,
+        "priority_vector_A": W2,
+        "priority_vector_B": W3,
+        "final_score": W,
+        "ranking": df_result[['Alternatif', 'Skor Akhir', 'Ranking']]
+    })
+
     # Menampilkan Hasil Akhir dengan Ranking di bagian paling bawah
-    st.write("### Hasil Akhir AHP dengan Ranking:")
+    st.write(f"### Hasil Akhir AHP dengan Ranking (User {user_id}):")
     st.table(df_result[['Alternatif', 'Skor Akhir', 'Ranking']])
 
+def delete_user_response(user_id, index):
+    """
+    Delete a specific response for the given user.
+    """
+    del user_responses[user_id][index]
 
 def main():
     st.set_page_config(page_title="Kalkulator AHP ", page_icon=":bar_chart:")
@@ -122,13 +139,15 @@ def main():
             n = len(criterias)
             A = np.zeros((n, n))
 
+            user_id = st.text_input("Masukkan ID Pengguna:", value="")
+
             for i in range(n):
                 for j in range(i, n):
                     if i == j:
                         A[i][j] = 1
                     else:
                         st.markdown(f" ##### Kriteria {criterias[i]} dibandingkan dengan Kriteria {criterias[j]}")
-                        criteriaradio = st.radio("Pilih kriteria yang lebih prioritas ", (criterias[i], criterias[j]), horizontal=True)
+                        criteriaradio = st.radio(f"Pilih kriteria yang lebih prioritas untuk User {user_id}", (criterias[i], criterias[j]), horizontal=True)
 
                         if criteriaradio == criterias[i]:
                             A[i][j] = st.slider(f"Seberapa jauh {criterias[i]} lebih penting dibandingkan {criterias[j]} ?", 1, 9, 1)
@@ -151,7 +170,7 @@ def main():
                         if i == j:
                             B[k][i][j] = 1
                         else:
-                            alternativeradio = st.radio(f"Pilih alternatif yang lebih prioritas untuk kriteria {criterias[k]}", (alternatives[i], alternatives[j]), horizontal=True)
+                            alternativeradio = st.radio(f"Pilih alternatif yang lebih prioritas untuk kriteria {criterias[k]} (User {user_id})", (alternatives[i], alternatives[j]), horizontal=True)
 
                             if alternativeradio == alternatives[i]:
                                 B[k][i][j] = st.slider(f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[i]} lebih baik dibandingkan {alternatives[j]} ?", 1, 9, 1)
@@ -164,8 +183,30 @@ def main():
         st.write("##")
 
         if btn:
-            calculate_ahp(A, B, n, m, criterias, alternatives)
+            calculate_ahp(A, B, n, m, criterias, alternatives, user_id)
 
+        # Menampilkan hasil perhitungan AHP untuk semua user
+        with st.expander("Hasil Perhitungan AHP untuk Semua User"):
+            if user_responses:
+                for user_id, responses in user_responses.items():
+                    st.write(f"## Hasil AHP untuk User {user_id}")
+                    for i, response in enumerate(responses):
+                        st.write(f"### Perhitungan AHP {i+1}")
+                        st.write("Matriks Perbandingan Kriteria:")
+                        st.table(pd.DataFrame(response["comparison_matrix_A"], index=criterias, columns=criterias))
+                        st.write("Bobot Kriteria:")
+                        st.table(pd.DataFrame(response["priority_vector_A"], index=criterias, columns=["Bobot"]))
+                        st.write("Matriks Perbandingan Alternatif:")
+                        for j in range(n):
+                            st.write(f"Matriks Perbandingan Alternatif untuk Kriteria {criterias[j]}:")
+                            st.table(pd.DataFrame(response["comparison_matrix_B"][j], index=alternatives, columns=alternatives))
+                        st.write("Bobot Alternatif:")
+                        st.table(pd.DataFrame(response["priority_vector_B"], index=criterias, columns=alternatives))
+                        st.write("Skor Akhir dan Ranking:")
+                        st.table(response["ranking"])
+                        st.button(f"Hapus Hasil Perhitungan {i+1} (User {user_id})", key=f"delete_button_{user_id}_{i}", on_click=delete_user_response, args=(user_id, i))
+            else:
+                st.write("Belum ada hasil AHP yang disimpan.")
 
 if __name__ == '__main__':
     main()
