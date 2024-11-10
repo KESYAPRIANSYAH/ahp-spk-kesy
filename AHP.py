@@ -21,7 +21,7 @@ def save_response(respondent_name, A, B, W, criterias, alternatives):
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'criteria_data': A.tolist(),
         'alternative_data': B.tolist(),
-        'final_scores': [float(score) for score in W],
+        'final_scores': [float(score) for score in W],  # Ensure float type
         'criterias': list(criterias),
         'alternatives': list(alternatives)
     }
@@ -35,6 +35,7 @@ def save_to_csv():
     to handle complex data structures like lists and numpy arrays.
     """
     if len(st.session_state.responses) > 0:
+        # Convert response data to DataFrame-friendly format
         df_data = []
         for response in st.session_state.responses:
             row_data = {
@@ -58,6 +59,7 @@ def load_from_csv():
     """
     try:
         df = pd.read_csv('responses.csv')
+        # Convert string representations of lists back to actual lists/arrays
         for index, row in df.iterrows():
             response_data = {
                 'respondent_name': str(row['respondent_name']),
@@ -155,11 +157,13 @@ def calculate_aggregate_results(responses):
     Calculate aggregate results from all responses with proper type conversion.
     """
     try:
+        # Convert scores to proper numpy arrays
         all_scores = []
         for response in responses:
             scores = np.array(response['final_scores'], dtype=float)
             all_scores.append(scores)
         
+        # Calculate mean only if we have scores
         if all_scores:
             all_scores_array = np.array(all_scores)
             avg_scores = np.mean(all_scores_array, axis=0)
@@ -173,21 +177,34 @@ def main():
     st.set_page_config(page_title="Kalkulator AHP", page_icon=":bar_chart:")
     st.header("Kalkulator AHP Untuk Menentukan Jenis Gamifikasi Pop-Up Campaign")
     
+    # Try to load existing responses
     load_from_csv()
     
+    # Add tabs for input and analysis
     tab1, tab2 = st.tabs(["Input Data", "Analisis Responden"])
     
     with tab1:
         st.sidebar.title("Kriteria & Alternatif")
         
+        # Add respondent information field
         respondent_name = st.text_input("Nama Responden")
         
         st.sidebar.info("""
         ### Petunjuk Pengisian AHP
-        1. Masukkan Input Metrik dan Nama Jenis Gamifikasi dengan tanda koma, misal CTR, CR, IMPRESSION.
-        2. Konsistensi: Pastikan perbandingan konsisten, misal jika A lebih penting dari B, dan B lebih penting dari C, maka A lebih penting dari C.
-        3. Skala: 1 hingga 9 (1: Sama penting, 9: Mutlak lebih penting).
-        4. Perbandingan Simetris: Nilai perbandingan harus terbalik secara otomatis.
+        
+        Untuk mendapatkan hasil yang optimal dan konsisten, harap perhatikan langkah-langkah berikut saat mengisi nilai perbandingan:
+        
+        1. Masukkan Input Metrik dan Nama Jenis Gamifikasi dengan tanda , misal CTR, CR, IMPRESSION.
+        2. **Konsistensi**: Jika Kriteria A lebih penting dari Kriteria B, dan Kriteria B lebih penting dari Kriteria C, maka Kriteria A seharusnya jauh lebih penting daripada Kriteria C.
+        
+        3. **Skala Pengisian**: Gunakan skala **1 hingga 9**:
+           - 1: Sama penting
+           - 3: Sedikit lebih penting
+           - 5: Lebih penting
+           - 7: Sangat lebih penting
+           - 9: Mutlak lebih penting
+        
+        4. **Perbandingan Simetris**: Jika Anda menilai Kriteria A lebih penting daripada Kriteria B, maka sebaliknya, nilai Kriteria B terhadap Kriteria A harus otomatis terbalik.
         """)
         
         cri = st.sidebar.text_input("Masukkan Kriteria Metrik")
@@ -219,13 +236,13 @@ def main():
                                 f"Seberapa jauh {criterias[i]} lebih penting dibandingkan {criterias[j]}?",
                                 1, 9, 1, key=f"crit_slider_{i}_{j}"
                             )
-                            A[j][i] = 1 / A[i][j]
+                            A[j][i] = 1/A[i][j]
                         else:
                             A[j][i] = st.slider(
                                 f"Seberapa jauh {criterias[j]} lebih penting dibandingkan {criterias[i]}?",
                                 1, 9, 1, key=f"crit_slider_{j}_{i}"
                             )
-                            A[i][j] = 1 / A[j][i]
+                            A[i][j] = 1/A[j][i]
             
             with st.expander("Bobot Alternatif"):
                 st.subheader("Perbandingan Berpasangan untuk Alternatif")
@@ -249,13 +266,13 @@ def main():
                                     f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[i]} lebih baik dibandingkan {alternatives[j]}?",
                                     1, 9, 1, key=f"alt_slider_{k}_{i}_{j}"
                                 )
-                                B[k][j][i] = 1 / B[k][i][j]
+                                B[k][j][i] = 1/B[k][i][j]
                             else:
                                 B[k][j][i] = st.slider(
                                     f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[j]} lebih baik dibandingkan {alternatives[i]}?",
                                     1, 9, 1, key=f"alt_slider_{k}_{j}_{i}"
                                 )
-                                B[k][i][j] = 1 / B[k][j][i]
+                                B[k][i][j] = 1/B[k][j][i]
             
             if st.button("Hitung dan Simpan AHP"):
                 if not respondent_name:
@@ -263,8 +280,10 @@ def main():
                 else:
                     W, W2, W3 = calculate_ahp(A, B, n, m, criterias, alternatives)
                     
+                    # Save response
                     save_response(respondent_name, A, B, W, criterias, alternatives)
                     
+                    # Show results
                     df_result = pd.DataFrame({
                         'Alternatif': alternatives,
                         'Skor Akhir': W
@@ -283,6 +302,7 @@ def main():
         st.header("Analisis Semua Responden")
         
         if len(st.session_state.responses) > 0:
+            # Display respondents
             st.write("### Daftar Responden:")
             resp_df = pd.DataFrame([
                 {
@@ -293,16 +313,18 @@ def main():
             ])
             st.dataframe(resp_df)
             
+            # Add a reset button to clear all responses
             if st.button("Reset Data"):
-                st.session_state.responses = []
+                st.session_state.responses = []  # Clear session state
                 try:
-                    os.remove('responses.csv')
+                    os.remove('responses.csv')  # Remove the CSV file if it exists
                     st.success("Data berhasil dihapus dan direset!")
                 except FileNotFoundError:
                     st.warning("File CSV tidak ditemukan, tetapi data sudah direset.")
                 except Exception as e:
                     st.error(f"Terjadi kesalahan saat menghapus file: {str(e)}")
             
+            # Calculate aggregate results using the new function
             avg_scores = calculate_aggregate_results(st.session_state.responses)
             
             if avg_scores is not None:
@@ -325,6 +347,7 @@ def main():
                     "Rata-rata Skor Alternatif dari Semua Responden"
                 ))
                 
+                # Add download button for results
                 csv = df_aggregate.to_csv(index=False)
                 st.download_button(
                     "Download Hasil Agregasi (CSV)",
