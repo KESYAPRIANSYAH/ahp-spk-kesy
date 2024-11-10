@@ -11,42 +11,87 @@ if 'responses' not in st.session_state:
 
 # Save response to session state
 def save_response(respondent_name, respondent_role, A, B, W, criterias, alternatives):
+    """
+    Save the respondent's input data, including criteria and alternative weights,
+    into the session state and CSV file.
+    """
     response_data = {
-        'respondent_name': respondent_name,
-        'respondent_role': respondent_role,
+        'respondent_name': str(respondent_name),
+        'respondent_role': str(respondent_role),
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'criteria_data': A.tolist(),
         'alternative_data': B.tolist(),
-        'final_scores': W.tolist(),
-        'criterias': criterias,
-        'alternatives': alternatives
+        'final_scores': [float(score) for score in W],  # Ensure float type
+        'criterias': list(criterias),
+        'alternatives': list(alternatives)
     }
     
     st.session_state.responses.append(response_data)
-    
-    # Save to CSV for persistence
     save_to_csv()
 
 def save_to_csv():
+    """
+    Save all responses in session state to a CSV file. Uses JSON serialization
+    to handle complex data structures like lists and numpy arrays.
+    """
     if len(st.session_state.responses) > 0:
-        df = pd.DataFrame(st.session_state.responses)
+        # Convert response data to DataFrame-friendly format
+        df_data = []
+        for response in st.session_state.responses:
+            row_data = {
+                'respondent_name': response['respondent_name'],
+                'respondent_role': response['respondent_role'],
+                'timestamp': response['timestamp'],
+                'criteria_data': json.dumps(response['criteria_data']),
+                'alternative_data': json.dumps(response['alternative_data']),
+                'final_scores': json.dumps(response['final_scores']),
+                'criterias': json.dumps(response['criterias']),
+                'alternatives': json.dumps(response['alternatives'])
+            }
+            df_data.append(row_data)
+        
+        df = pd.DataFrame(df_data)
         df.to_csv('responses.csv', index=False)
 
 def load_from_csv():
+    """
+    Load responses from a CSV file into session state. Handles deserialization of
+    JSON strings back into Python lists and arrays.
+    """
     try:
         df = pd.read_csv('responses.csv')
-        st.session_state.responses = df.to_dict('records')
+        # Convert string representations of lists back to actual lists/arrays
+        for index, row in df.iterrows():
+            response_data = {
+                'respondent_name': str(row['respondent_name']),
+                'respondent_role': str(row['respondent_role']),
+                'timestamp': str(row['timestamp']),
+                'criteria_data': json.loads(row['criteria_data']),
+                'alternative_data': json.loads(row['alternative_data']),
+                'final_scores': json.loads(row['final_scores']),
+                'criterias': json.loads(row['criterias']),
+                'alternatives': json.loads(row['alternatives'])
+            }
+            st.session_state.responses.append(response_data)
     except FileNotFoundError:
+        st.session_state.responses = []
+    except Exception as e:
+        st.error(f"Error loading responses: {str(e)}")
         st.session_state.responses = []
 
 @st.cache_data
 def get_weight(A, str_label, labels):
+    """
+    Calculate normalized eigenvector (weights) from the pairwise comparison matrix A.
+    Also checks the Consistency Ratio (CR) and warns if it's too high.
+    """
     n = A.shape[0]
     e_vals, e_vecs = np.linalg.eig(A)
     lamb = np.max(np.real(e_vals))
     w = np.real(e_vecs[:, np.argmax(np.real(e_vals))])
-    w = w / np.sum(w)  # Normalisasi
+    w = w / np.sum(w)  # Normalize weights
     
+    # Consistency Index (CI) and Ratio (CR) calculation
     ri = {1: 0, 2: 0, 3: 0.58, 4: 0.9, 5: 1.12, 6: 1.24,
           7: 1.32, 8: 1.41, 9: 1.45, 10: 1.49, 11: 1.51}
     ci = (lamb - n) / (n - 1)
@@ -63,6 +108,9 @@ def get_weight(A, str_label, labels):
     return w
 
 def plot_graph(x, y, ylabel, title):
+    """
+    Create a bar chart to visualize weights.
+    """
     fig, ax = plt.subplots()
     ax.bar(y, x, color='#088eff')
     ax.set_facecolor('#F0F2F6')
@@ -74,6 +122,10 @@ def plot_graph(x, y, ylabel, title):
 
 @st.cache_data
 def calculate_ahp(A, B, n, m, criterias, alternatives):
+    """
+    Calculate the AHP scores by normalizing matrices and performing matrix multiplication.
+    """
+    # Ensure symmetry in the criteria matrix
     for i in range(n):
         for j in range(i, n):
             if i != j:
@@ -82,6 +134,7 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     st.markdown(" #### Tabel Kriteria")
     st.table(dfA)
 
+    # Ensure symmetry in the alternatives matrices
     for k in range(n):
         for i in range(m):
             for j in range(i, m):
@@ -90,11 +143,7 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     
     st.write("---")
 
-    for i in range(n):
-        dfB = pd.DataFrame(B[i], index=alternatives, columns=alternatives)
-        st.markdown(f" #### Tabel Alternatif untuk Kriteria {criterias[i]}")
-        st.table(dfB)
-
+    # Calculate weights for criteria and alternatives
     W2 = get_weight(A, "Tabel Kriteria", criterias)
     W3 = np.zeros((n, m))
 
@@ -104,6 +153,27 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
 
     W = np.dot(W2, W3)
     return W, W2, W3
+
+def calculate_aggregate_results(responses):
+    """
+    Calculate aggregate results from all responses with proper type conversion.
+    """
+    try:
+        # Convert scores to proper numpy arrays
+        all_scores = []
+        for response in responses:
+            scores = np.array(response['final_scores'], dtype=float)
+            all_scores.append(scores)
+        
+        # Calculate mean only if we have scores
+        if all_scores:
+            all_scores_array = np.array(all_scores)
+            avg_scores = np.mean(all_scores_array, axis=0)
+            return avg_scores.tolist()
+        return None
+    except Exception as e:
+        st.error(f"Error calculating aggregate results: {str(e)}")
+        return None
 
 def main():
     st.set_page_config(page_title="Kalkulator AHP", page_icon=":bar_chart:")
@@ -128,7 +198,7 @@ def main():
         
         Untuk mendapatkan hasil yang optimal dan konsisten, harap perhatikan langkah-langkah berikut saat mengisi nilai perbandingan:
         
-        1. Masukkan Input Metrik dan Nama Jenis Gamifikasi dengan tanda , misal CTR, CR , IMPRESSION 
+        1. Masukkan Input Metrik dan Nama Jenis Gamifikasi dengan tanda , misal CTR, CR, IMPRESSION.
         2. **Konsistensi**: Jika Kriteria A lebih penting dari Kriteria B, dan Kriteria B lebih penting dari Kriteria C, maka Kriteria A seharusnya jauh lebih penting daripada Kriteria C.
         
         3. **Skala Pengisian**: Gunakan skala **1 hingga 9**:
@@ -248,38 +318,40 @@ def main():
             ])
             st.dataframe(resp_df)
             
-            # Calculate aggregate results
-            all_scores = [np.array(r['final_scores']) for r in st.session_state.responses]
-            avg_scores = np.mean(all_scores, axis=0)
+            # Calculate aggregate results using the new function
+            avg_scores = calculate_aggregate_results(st.session_state.responses)
             
-            alternatives = st.session_state.responses[0]['alternatives']
-            
-            df_aggregate = pd.DataFrame({
-                'Alternatif': alternatives,
-                'Rata-rata Skor': avg_scores
-            })
-            df_aggregate = df_aggregate.sort_values('Rata-rata Skor', ascending=False)
-            df_aggregate['Ranking'] = df_aggregate['Rata-rata Skor'].rank(ascending=False).astype(int)
-            
-            st.write("### Hasil Agregasi:")
-            st.table(df_aggregate)
-            
-            st.pyplot(plot_graph(
-                avg_scores,
-                alternatives,
-                "Alternatif",
-                "Rata-rata Skor Alternatif dari Semua Responden"
-            ))
-            
-            # Add download button for results
-            csv = df_aggregate.to_csv(index=False)
-            st.download_button(
-                "Download Hasil Agregasi (CSV)",
-                csv,
-                "ahp_results.csv",
-                "text/csv",
-                key='download-csv'
-            )
+            if avg_scores is not None:
+                alternatives = st.session_state.responses[0]['alternatives']
+                
+                df_aggregate = pd.DataFrame({
+                    'Alternatif': alternatives,
+                    'Rata-rata Skor': avg_scores
+                })
+                df_aggregate = df_aggregate.sort_values('Rata-rata Skor', ascending=False)
+                df_aggregate['Ranking'] = df_aggregate['Rata-rata Skor'].rank(ascending=False).astype(int)
+                
+                st.write("### Hasil Agregasi:")
+                st.table(df_aggregate)
+                
+                st.pyplot(plot_graph(
+                    avg_scores,
+                    alternatives,
+                    "Alternatif",
+                    "Rata-rata Skor Alternatif dari Semua Responden"
+                ))
+                
+                # Add download button for results
+                csv = df_aggregate.to_csv(index=False)
+                st.download_button(
+                    "Download Hasil Agregasi (CSV)",
+                    csv,
+                    "ahp_results.csv",
+                    "text/csv",
+                    key='download-csv'
+                )
+            else:
+                st.error("Terjadi kesalahan dalam menghitung hasil agregasi")
         else:
             st.info("Belum ada data responden yang tersimpan")
 
