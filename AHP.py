@@ -10,10 +10,9 @@ if 'responses' not in st.session_state:
     st.session_state.responses = []
 
 # Save response to session state and CSV
-def save_response(name, email, A, B, criterias, alternatives, final_scores):
+def save_response(name, A, B, criterias, alternatives, final_scores):
     response_data = {
         'name': name,
-        'email': email,
         'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         'criteria_matrix': A.tolist(),
         'alternatives_matrix': B.tolist(),
@@ -81,6 +80,17 @@ def plot_graph(x, y, ylabel, title):
     plt.xticks(rotation=45)
     return fig
 
+def delete_response(index):
+    if 'responses' in st.session_state:
+        del st.session_state.responses[index]
+        # Update CSV file
+        if st.session_state.responses:
+            pd.DataFrame(st.session_state.responses).to_csv('responses.csv', index=False)
+        else:
+            # If no responses left, create empty CSV
+            pd.DataFrame(columns=['name', 'timestamp', 'criteria_matrix', 'alternatives_matrix', 
+                                'criteria_list', 'alternatives_list', 'final_scores']).to_csv('responses.csv', index=False)
+            
 @st.cache_data
 def calculate_ahp(A, B, n, m, criterias, alternatives):
     for i in range(n):
@@ -138,7 +148,7 @@ def main():
         # Respondent Information
         st.subheader("Informasi Responden")
         name = st.text_input("Nama Lengkap")
-        email = st.text_input("Email")
+       
         
         st.sidebar.title("Kriteria & Alternatif")
         
@@ -171,7 +181,7 @@ def main():
         criterias = cri.split(",") if cri else []
         alternatives = alt.split(",") if alt else []
 
-        if cri and alt and name and email:
+        if cri and alt and name :
             with st.expander("Bobot Kriteria"):
                 st.subheader("Perbandingan Berpasangan untuk Kriteria")
                 n = len(criterias)
@@ -242,24 +252,32 @@ def main():
 
             if btn:
                 W = calculate_ahp(A, B, n, m, criterias, alternatives)
-                save_response(name, email, A, B, criterias, alternatives, W)
+                save_response(name, A, B, criterias, alternatives, W)
                 st.success("Data berhasil disimpan!")
     
     with tab2:
         st.subheader("Analisis Multi-Responden")
         
         # Display all responses
-        if st.session_state.responses:
-            st.write("### Daftar Responden:")
-            for resp in st.session_state.responses:
-                with st.expander(f"Responden: {resp['name']} - {resp['timestamp']}"):
-                    st.write(f"Email: {resp['email']}")
-                    st.write("Skor Akhir:")
-                    df_result = pd.DataFrame({
-                        'Alternatif': resp['alternatives_list'],
-                        'Skor': resp['final_scores']
-                    })
-                    st.table(df_result)
+      if st.session_state.responses:
+    st.write("### Daftar Responden:")
+    for idx, resp in enumerate(st.session_state.responses):
+        with st.expander(f"Responden: {resp['name']} - {resp['timestamp']}"):
+            col1, col2 = st.columns([3,1])
+            with col1:
+                st.write("Skor Akhir:")
+                df_result = pd.DataFrame({
+                    'Alternatif': resp['alternatives_list'],
+                    'Skor': resp['final_scores']
+                })
+                st.table(df_result)
+            with col2:
+                if st.button("Hapus Data", key=f"delete_{idx}"):
+                    delete_response(idx)
+                    st.rerun()
+
+
+                    
             
             # Calculate and display average scores
             avg_scores = calculate_average_scores(st.session_state.responses, alternatives)
