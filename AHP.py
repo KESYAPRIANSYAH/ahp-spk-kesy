@@ -139,51 +139,58 @@ def main():
             n = len(criterias)
             A = np.zeros((n, n))
 
-            user_id = st.text_input("Masukkan ID Pengguna:", value="")
+            user_ids = st.multiselect("Pilih User", [], format_func=lambda x: f"User {x}")
 
-            for i in range(n):
-                for j in range(i, n):
-                    if i == j:
-                        A[i][j] = 1
-                    else:
-                        st.markdown(f" ##### Kriteria {criterias[i]} dibandingkan dengan Kriteria {criterias[j]}")
-                        criteriaradio = st.radio(f"Pilih kriteria yang lebih prioritas untuk User {user_id}", (criterias[i], criterias[j]), horizontal=True)
-
-                        if criteriaradio == criterias[i]:
-                            A[i][j] = st.slider(f"Seberapa jauh {criterias[i]} lebih penting dibandingkan {criterias[j]} ?", 1, 9, 1)
-                            A[j][i] = float(1/A[i][j])
+            for user_id in user_ids:
+                st.write(f"## Perbandingan Berpasangan untuk User {user_id}")
+                for i in range(n):
+                    for j in range(i, n):
+                        if i == j:
+                            A[i][j] = 1
                         else:
-                            A[j][i] = st.slider(f"Seberapa jauh {criterias[j]} lebih penting dibandingkan {criterias[i]} ?", 1, 9, 1)
-                            A[i][j] = float(1/A[j][i])
+                            st.markdown(f" ##### Kriteria {criterias[i]} dibandingkan dengan Kriteria {criterias[j]}")
+                            criteriaradio = st.radio(f"Pilih kriteria yang lebih prioritas untuk User {user_id}", (criterias[i], criterias[j]), horizontal=True)
+
+                            if criteriaradio == criterias[i]:
+                                A[i][j] = st.slider(f"Seberapa jauh {criterias[i]} lebih penting dibandingkan {criterias[j]} ?", 1, 9, 1)
+                                A[j][i] = float(1/A[i][j])
+                            else:
+                                A[j][i] = st.slider(f"Seberapa jauh {criterias[j]} lebih penting dibandingkan {criterias[i]} ?", 1, 9, 1)
+                                A[i][j] = float(1/A[j][i])
+                calculate_ahp(A, B, n, m, criterias, alternatives, user_id)
 
         with st.expander("Bobot Alternatif"):
             st.subheader("Perbandingan Berpasangan untuk Alternatif")
             m = len(alternatives)
             B = np.zeros((n, m, m))
 
-            for k in range(n):
-                st.write("---")
-                st.markdown(f" ##### Perbandingan Alternatif untuk Kriteria {criterias[k]}")
+            for user_id in user_ids:
+                st.write(f"## Perbandingan Berpasangan untuk User {user_id}")
+                for k in range(n):
+                    st.write("---")
+                    st.markdown(f" ##### Perbandingan Alternatif untuk Kriteria {criterias[k]}")
 
-                for i in range(m):
-                    for j in range(i, m):
-                        if i == j:
-                            B[k][i][j] = 1
-                        else:
-                            alternativeradio = st.radio(f"Pilih alternatif yang lebih prioritas untuk kriteria {criterias[k]} (User {user_id})", (alternatives[i], alternatives[j]), horizontal=True)
-
-                            if alternativeradio == alternatives[i]:
-                                B[k][i][j] = st.slider(f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[i]} lebih baik dibandingkan {alternatives[j]} ?", 1, 9, 1)
-                                B[k][j][i] = float(1/B[k][i][j])
+                    for i in range(m):
+                        for j in range(i, m):
+                            if i == j:
+                                B[k][i][j] = 1
                             else:
-                                B[k][j][i] = st.slider(f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[j]} lebih baik dibandingkan {alternatives[i]} ?", 1, 9, 1)
-                                B[k][i][j] = float(1/B[k][j][i])
+                                alternativeradio = st.radio(f"Pilih alternatif yang lebih prioritas untuk kriteria {criterias[k]} (User {user_id})", (alternatives[i], alternatives[j]), horizontal=True)
+
+                                if alternativeradio == alternatives[i]:
+                                    B[k][i][j] = st.slider(f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[i]} lebih baik dibandingkan {alternatives[j]} ?", 1, 9, 1)
+                                    B[k][j][i] = float(1/B[k][i][j])
+                                else:
+                                    B[k][j][i] = st.slider(f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[j]} lebih baik dibandingkan {alternatives[i]} ?", 1, 9, 1)
+                                    B[k][i][j] = float(1/B[k][j][i])
+                calculate_ahp(A, B, n, m, criterias, alternatives, user_id)
 
         btn = st.button("Hitung AHP")
         st.write("##")
 
         if btn:
-            calculate_ahp(A, B, n, m, criterias, alternatives, user_id)
+            for user_id in user_ids:
+                calculate_ahp(A, B, n, m, criterias, alternatives, user_id)
 
         # Menampilkan hasil perhitungan AHP untuk semua user
         with st.expander("Hasil Perhitungan AHP untuk Semua User"):
