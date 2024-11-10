@@ -96,7 +96,6 @@ def get_weight(A, str_label, labels):
     w = np.real(e_vecs[:, np.argmax(np.real(e_vals))])
     w = w / np.sum(w)
     
-    # Consistency calculation
     ri = {1: 0, 2: 0, 3: 0.58, 4: 0.9, 5: 1.12, 6: 1.24,
           7: 1.32, 8: 1.41, 9: 1.45, 10: 1.49, 11: 1.51}
     ci = (lamb - n) / (n - 1)
@@ -167,6 +166,25 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
         'alternatives': alternatives
     }
 
+def calculate_aggregate_results(responses):
+    """
+    Calculate aggregate results from all responses.
+    """
+    try:
+        all_scores = []
+        for response in responses:
+            scores = np.array(response['final_scores'], dtype=float)
+            all_scores.append(scores)
+        
+        if all_scores:
+            all_scores_array = np.array(all_scores)
+            avg_scores = np.mean(all_scores_array, axis=0)
+            return avg_scores.tolist()
+        return None
+    except Exception as e:
+        st.error(f"Error calculating aggregate results: {str(e)}")
+        return None
+
 def display_results(calculation_data):
     """
     Display the AHP calculation results.
@@ -204,7 +222,20 @@ def main():
         
         st.sidebar.info("""
         ### Petunjuk Pengisian AHP
-        [previous sidebar info content...]
+        
+        Untuk mendapatkan hasil yang optimal dan konsisten, harap perhatikan langkah-langkah berikut saat mengisi nilai perbandingan:
+        
+        1. Masukkan Input Metrik dan Nama Jenis Gamifikasi dengan tanda , misal CTR, CR, IMPRESSION.
+        2. **Konsistensi**: Jika Kriteria A lebih penting dari Kriteria B, dan Kriteria B lebih penting dari Kriteria C, maka Kriteria A seharusnya jauh lebih penting daripada Kriteria C.
+        
+        3. **Skala Pengisian**: Gunakan skala **1 hingga 9**:
+           - 1: Sama penting
+           - 3: Sedikit lebih penting
+           - 5: Lebih penting
+           - 7: Sangat lebih penting
+           - 9: Mutlak lebih penting
+        
+        4. **Perbandingan Simetris**: Jika Anda menilai Kriteria A lebih penting daripada Kriteria B, maka sebaliknya, nilai Kriteria B terhadap Kriteria A harus otomatis terbalik.
         """)
         
         cri = st.sidebar.text_input("Masukkan Kriteria Metrik")
@@ -217,7 +248,62 @@ def main():
             n = len(criterias)
             m = len(alternatives)
             
-            # [Previous input collection code remains the same...]
+            with st.expander("Bobot Kriteria"):
+                st.subheader("Perbandingan Berpasangan untuk Kriteria")
+                A = np.ones((n, n))
+                
+                for i in range(n):
+                    for j in range(i+1, n):
+                        st.markdown(f"##### Kriteria {criterias[i]} dibandingkan dengan Kriteria {criterias[j]}")
+                        criteriaradio = st.radio(
+                            f"Pilih kriteria yang lebih prioritas",
+                            (criterias[i], criterias[j]),
+                            key=f"crit_{i}_{j}",
+                            horizontal=True
+                        )
+                        
+                        if criteriaradio == criterias[i]:
+                            A[i][j] = st.slider(
+                                f"Seberapa jauh {criterias[i]} lebih penting dibandingkan {criterias[j]}?",
+                                1, 9, 1, key=f"crit_slider_{i}_{j}"
+                            )
+                            A[j][i] = 1/A[i][j]
+                        else:
+                            A[j][i] = st.slider(
+                                f"Seberapa jauh {criterias[j]} lebih penting dibandingkan {criterias[i]}?",
+                                1, 9, 1, key=f"crit_slider_{j}_{i}"
+                            )
+                            A[i][j] = 1/A[j][i]
+            
+            with st.expander("Bobot Alternatif"):
+                st.subheader("Perbandingan Berpasangan untuk Alternatif")
+                B = np.ones((n, m, m))
+                
+                for k in range(n):
+                    st.write("---")
+                    st.markdown(f"##### Perbandingan Alternatif untuk Kriteria {criterias[k]}")
+                    
+                    for i in range(m):
+                        for j in range(i+1, m):
+                            alternativeradio = st.radio(
+                                f"Pilih alternatif yang lebih prioritas untuk kriteria {criterias[k]}",
+                                (alternatives[i], alternatives[j]),
+                                key=f"alt_{k}_{i}_{j}",
+                                horizontal=True
+                            )
+                            
+                            if alternativeradio == alternatives[i]:
+                                B[k][i][j] = st.slider(
+                                    f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[i]} lebih baik dibandingkan {alternatives[j]}?",
+                                    1, 9, 1, key=f"alt_slider_{k}_{i}_{j}"
+                                )
+                                B[k][j][i] = 1/B[k][i][j]
+                            else:
+                                B[k][j][i] = st.slider(
+                                    f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[j]} lebih baik dibandingkan {alternatives[i]}?",
+                                    1, 9, 1, key=f"alt_slider_{k}_{j}_{i}"
+                                )
+                                B[k][i][j] = 1/B[k][j][i]
             
             col1, col2 = st.columns(2)
             with col1:
@@ -245,26 +331,4 @@ def main():
             for idx, response in enumerate(st.session_state.responses):
                 col1, col2, col3 = st.columns([3, 2, 1])
                 with col1:
-                    st.write(f"**Nama:** {response['respondent_name']}")
-                with col2:
-                    st.write(f"**Waktu:** {response['timestamp']}")
-                with col3:
-                    if st.button("Hapus", key=f"delete_{idx}"):
-                        delete_response(idx)
-            
-            # Reset all data button
-            if st.button("Reset Semua Data"):
-                st.session_state.responses = []
-                try:
-                    os.remove('responses.csv')
-                    st.success("Semua data berhasil dihapus!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Terjadi kesalahan: {str(e)}")
-            
-            # [Previous aggregation analysis code remains the same...]
-        else:
-            st.info("Belum ada data responden yang tersimpan")
-
-if __name__ == '__main__':
-    main()
+                    st.write(f"**Nama:** {
