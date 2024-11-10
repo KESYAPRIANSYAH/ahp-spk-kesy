@@ -276,7 +276,7 @@ def main():
                     with col2:
                         if st.button("Hapus Data", key=f"delete_{idx}"):
                             delete_response(idx)
-                            st.rerun()
+                            st.experimental_rerun()
             
             # Calculate and display average scores
             avg_scores = calculate_average_scores(st.session_state.responses, alternatives)
