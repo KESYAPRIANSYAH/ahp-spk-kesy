@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
 @st.cache_data
 def get_weight(A, str_label, labels):
@@ -26,7 +27,6 @@ def get_weight(A, str_label, labels):
 
     return w
 
-
 def plot_graph(x, y, ylabel, title):
     fig, ax = plt.subplots()
     ax.bar(y, x, color='#088eff')
@@ -35,7 +35,6 @@ def plot_graph(x, y, ylabel, title):
     ax.set_xlabel(ylabel)
     ax.set_ylabel("Nilai")
     return fig
-
 
 @st.cache_data
 def calculate_ahp(A, B, n, m, criterias, alternatives):
@@ -81,34 +80,36 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     st.write("### Hasil Akhir AHP dengan Ranking:")
     st.table(df_result[['Alternatif', 'Skor Akhir', 'Ranking']])
 
+    return df_result
+
+def save_data_to_csv(name, criterias, alternatives, df_result):
+    # Membuat nama file CSV
+    file_name = "data_ahp_responden.csv"
+    data = {
+        "Nama Responden": [name] * len(alternatives),
+        "Alternatif": alternatives,
+        "Skor Akhir": df_result['Skor Akhir'].tolist(),
+        "Ranking": df_result['Ranking'].tolist()
+    }
+    df = pd.DataFrame(data)
+
+    # Mengecek apakah file sudah ada
+    if os.path.exists(file_name):
+        df.to_csv(file_name, mode='a', header=False, index=False)
+    else:
+        df.to_csv(file_name, index=False)
 
 def main():
-    st.set_page_config(page_title="Kalkulator AHP ", page_icon=":bar_chart:")
+    st.set_page_config(page_title="Kalkulator AHP", page_icon=":bar_chart:")
     st.header("Kalkulator AHP Untuk Menentukan Jenis Gamifikasi Pop-Up Campaign")
-    st.sidebar.title(" Kriteria & Alternatif")
+    st.sidebar.title("Kriteria & Alternatif")
 
-    # Petunjuk Pengisian AHP
+    # Input Nama Responden
+    name = st.text_input("Nama Responden", "")
+    
     st.sidebar.info("""
     ### Petunjuk Pengisian AHP
-    
-    Untuk mendapatkan hasil yang optimal dan konsisten, harap perhatikan langkah-langkah berikut saat mengisi nilai perbandingan:
-    
-    1. Masukkan Input Metrik dan Nama Jenis Gamifikasi dengan tanda , misal CTR, CR , IMPRESSION 
-    2. **Konsistensi**: Jika Kriteria A lebih penting dari Kriteria B, dan Kriteria B lebih penting dari Kriteria C, maka Kriteria A seharusnya jauh lebih penting daripada Kriteria C.
-    
-    3. **Skala Pengisian**: Gunakan skala **1 hingga 9**:
-       - 1: Sama penting
-       - 3: Sedikit lebih penting
-       - 5: Lebih penting
-       - 7: Sangat lebih penting
-       - 9: Mutlak lebih penting
-    
-    4. **Perbandingan Simetris**: Jika Anda menilai Kriteria A lebih penting daripada Kriteria B, maka sebaliknya, nilai Kriteria B terhadap Kriteria A harus otomatis terbalik.
-       ### Penggunaan Nilai 2, 4, 6, dan 8:
-    - **Nilai 2**: Kriteria A sedikit lebih penting dari Kriteria B.
-    - **Nilai 4**: Kriteria A lebih penting dari Kriteria B, tetapi tidak terlalu jauh.
-    - **Nilai 6**: Kriteria A cukup lebih penting dari Kriteria B.
-    - **Nilai 8**: Kriteria A sangat lebih penting dibandingkan Kriteria B.                 
+    ...
     """)
     
     cri = st.sidebar.text_input("Masukkan Kriteria Metrik")
@@ -116,7 +117,7 @@ def main():
     criterias = cri.split(",")
     alternatives = alt.split(",")
 
-    if cri and alt:
+    if cri and alt and name:
         with st.expander("Bobot Kriteria"):
             st.subheader("Perbandingan Berpasangan untuk Kriteria")
             n = len(criterias)
@@ -127,14 +128,14 @@ def main():
                     if i == j:
                         A[i][j] = 1
                     else:
-                        st.markdown(f" ##### Kriteria {criterias[i]} dibandingkan dengan Kriteria {criterias[j]}")
-                        criteriaradio = st.radio("Pilih kriteria yang lebih prioritas ", (criterias[i], criterias[j]), horizontal=True)
+                        st.markdown(f"##### Kriteria {criterias[i]} dibandingkan dengan Kriteria {criterias[j]}")
+                        criteriaradio = st.radio("Pilih kriteria yang lebih prioritas", (criterias[i], criterias[j]), horizontal=True)
 
                         if criteriaradio == criterias[i]:
-                            A[i][j] = st.slider(f"Seberapa jauh {criterias[i]} lebih penting dibandingkan {criterias[j]} ?", 1, 9, 1)
+                            A[i][j] = st.slider(f"Seberapa jauh {criterias[i]} lebih penting dibandingkan {criterias[j]}?", 1, 9, 1)
                             A[j][i] = float(1/A[i][j])
                         else:
-                            A[j][i] = st.slider(f"Seberapa jauh {criterias[j]} lebih penting dibandingkan {criterias[i]} ?", 1, 9, 1)
+                            A[j][i] = st.slider(f"Seberapa jauh {criterias[j]} lebih penting dibandingkan {criterias[i]}?", 1, 9, 1)
                             A[i][j] = float(1/A[j][i])
 
         with st.expander("Bobot Alternatif"):
@@ -144,7 +145,7 @@ def main():
 
             for k in range(n):
                 st.write("---")
-                st.markdown(f" ##### Perbandingan Alternatif untuk Kriteria {criterias[k]}")
+                st.markdown(f"##### Perbandingan Alternatif untuk Kriteria {criterias[k]}")
 
                 for i in range(m):
                     for j in range(i, m):
@@ -154,18 +155,19 @@ def main():
                             alternativeradio = st.radio(f"Pilih alternatif yang lebih prioritas untuk kriteria {criterias[k]}", (alternatives[i], alternatives[j]), horizontal=True)
 
                             if alternativeradio == alternatives[i]:
-                                B[k][i][j] = st.slider(f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[i]} lebih baik dibandingkan {alternatives[j]} ?", 1, 9, 1)
+                                B[k][i][j] = st.slider(f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[i]} lebih baik dibandingkan {alternatives[j]}?", 1, 9, 1)
                                 B[k][j][i] = float(1/B[k][i][j])
                             else:
-                                B[k][j][i] = st.slider(f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[j]} lebih baik dibandingkan {alternatives[i]} ?", 1, 9, 1)
+                                B[k][j][i] = st.slider(f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[j]} lebih baik dibandingkan {alternatives[i]}?", 1, 9, 1)
                                 B[k][i][j] = float(1/B[k][j][i])
 
         btn = st.button("Hitung AHP")
         st.write("##")
 
         if btn:
-            calculate_ahp(A, B, n, m, criterias, alternatives)
-
+            df_result = calculate_ahp(A, B, n, m, criterias, alternatives)
+            save_data_to_csv(name, criterias, alternatives, df_result)
+            st.success("Data berhasil disimpan!")
 
 if __name__ == '__main__':
     main()
