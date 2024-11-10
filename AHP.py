@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
 import json
+import os
 
 # Initialize session state for storing responses
 if 'responses' not in st.session_state:
@@ -317,6 +318,17 @@ def main():
                 for r in st.session_state.responses
             ])
             st.dataframe(resp_df)
+            
+            # Add a reset button to clear all responses
+            if st.button("Reset Data"):
+                st.session_state.responses = []  # Clear session state
+                try:
+                    os.remove('responses.csv')  # Remove the CSV file if it exists
+                    st.success("Data berhasil dihapus dan direset!")
+                except FileNotFoundError:
+                    st.warning("File CSV tidak ditemukan, tetapi data sudah direset.")
+                except Exception as e:
+                    st.error(f"Terjadi kesalahan saat menghapus file: {str(e)}")
             
             # Calculate aggregate results using the new function
             avg_scores = calculate_aggregate_results(st.session_state.responses)
