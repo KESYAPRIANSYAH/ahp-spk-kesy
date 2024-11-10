@@ -59,6 +59,31 @@ def save_to_csv():
         df = pd.DataFrame(df_data)
         df.to_csv('responses.csv', index=False)
 
+def load_from_csv():
+    """
+    Load responses from a CSV file into session state. Handles deserialization of
+    JSON strings back into Python lists and arrays.
+    """
+    try:
+        df = pd.read_csv('responses.csv')
+        # Convert string representations of lists back to actual lists/arrays
+        for index, row in df.iterrows():
+            response_data = {
+                'respondent_name': str(row['respondent_name']),
+                'timestamp': str(row['timestamp']),
+                'criteria_data': json.loads(row['criteria_data']),
+                'alternative_data': json.loads(row['alternative_data']),
+                'final_scores': json.loads(row['final_scores']),
+                'criterias': json.loads(row['criterias']),
+                'alternatives': json.loads(row['alternatives'])
+            }
+            st.session_state.responses.append(response_data)
+    except FileNotFoundError:
+        st.session_state.responses = []
+    except Exception as e:
+        st.error(f"Error loading responses: {str(e)}")
+        st.session_state.responses = []
+
 @st.cache_data
 def get_weight(A, str_label, labels):
     """
@@ -137,6 +162,9 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
 def main():
     st.set_page_config(page_title="Kalkulator AHP", page_icon=":bar_chart:")
     st.header("Kalkulator AHP Untuk Menentukan Jenis Gamifikasi Pop-Up Campaign")
+    
+    # Load existing responses
+    load_from_csv()
     
     # Add input fields
     respondent_name = st.text_input("Nama Responden")
