@@ -75,16 +75,6 @@ def load_from_csv():
         st.error(f"Error loading responses: {str(e)}")
         st.session_state.responses = []
 
-def delete_response(respondent_name):
-    """
-    Delete a specific user's response from the session state and update the CSV file.
-    """
-    st.session_state.responses = [
-        response for response in st.session_state.responses
-        if response['respondent_name'] != respondent_name
-    ]
-    save_to_csv()
-
 @st.cache_data
 def get_weight(A, str_label, labels):
     """
@@ -131,6 +121,7 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     """
     Calculate the AHP scores by normalizing matrices and performing matrix multiplication.
     """
+    # Ensure symmetry in the criteria matrix
     for i in range(n):
         for j in range(i, n):
             if i != j:
@@ -139,6 +130,7 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     st.markdown(" #### Tabel Kriteria")
     st.table(dfA)
 
+    # Ensure symmetry in the alternatives matrices
     for k in range(n):
         for i in range(m):
             for j in range(i, m):
@@ -147,6 +139,7 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     
     st.write("---")
 
+    # Calculate weights for criteria and alternatives
     W2 = get_weight(A, "Tabel Kriteria", criterias)
     W3 = np.zeros((n, m))
 
@@ -158,6 +151,9 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     return W, W2, W3
 
 def calculate_aggregate_results(responses):
+    """
+    Calculate aggregate results from all responses with proper type conversion.
+    """
     try:
         all_scores = []
         for response in responses:
@@ -227,7 +223,7 @@ def main():
                         else:
                             A[j][i] = st.slider(
                                 f"Seberapa jauh {criterias[j]} lebih penting dibandingkan {criterias[i]}?",
-                                 1, 9, 1, key=f"crit_slider_{j}_{i}"
+                                1, 9, 1, key=f"crit_slider_{j}_{i}"
                             )
                             A[i][j] = 1 / A[j][i]
             
@@ -266,6 +262,7 @@ def main():
                     st.error("Mohon isi nama responden terlebih dahulu!")
                 else:
                     W, W2, W3 = calculate_ahp(A, B, n, m, criterias, alternatives)
+                    
                     save_response(respondent_name, A, B, W, criterias, alternatives)
                     
                     df_result = pd.DataFrame({
@@ -296,16 +293,7 @@ def main():
             ])
             st.dataframe(resp_df)
             
-            selected_user = st.selectbox(
-                "Pilih pengguna untuk menghapus data:",
-                [r['respondent_name'] for r in st.session_state.responses]
-            )
-            
-            if st.button("Hapus Data Pengguna"):
-                delete_response(selected_user)
-                st.success(f"Data untuk {selected_user} berhasil dihapus!")
-            
-            if st.button("Reset Semua Data"):
+            if st.button("Reset Data"):
                 st.session_state.responses = []
                 try:
                     os.remove('responses.csv')
