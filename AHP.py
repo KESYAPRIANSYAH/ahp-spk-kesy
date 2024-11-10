@@ -145,11 +145,8 @@ def main():
     tab1, tab2 = st.tabs(["Input Data", "Analisis Responden"])
     
     with tab1:
-        # Respondent Information
-        st.subheader("Informasi Responden")
-        name = st.text_input("Nama Lengkap")
        
-        
+    
         st.sidebar.title("Kriteria & Alternatif")
         
         # Instructions in sidebar
@@ -175,7 +172,10 @@ def main():
         - **Nilai 6**: Kriteria A cukup lebih penting dari Kriteria B.
         - **Nilai 8**: Kriteria A sangat lebih penting dibandingkan Kriteria B.                 
         """)
+         # Respondent Information
         
+        st.subheader("Informasi Responden")
+        name = st.text_input("Nama Lengkap")
         cri = st.sidebar.text_input("Masukkan Kriteria Metrik")
         alt = st.sidebar.text_input("Masukkan Alternatif Jenis Gamifikasi")
         criterias = cri.split(",") if cri else []
