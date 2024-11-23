@@ -261,7 +261,7 @@ def main():
                 W = calculate_ahp(A, B, n, m, criterias, alternatives)
                 save_response(name, A, B, criterias, alternatives, W)
                 st.success("Data berhasil disimpan!")
-with tab2:
+    with tab2:
         st.subheader("Analisis Multi-Responden")
         
         if st.session_state.responses:
