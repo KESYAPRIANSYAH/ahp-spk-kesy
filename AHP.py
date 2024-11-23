@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
-from io import StringIO
 import json
+from io import BytesIO, StringIO
 
 # Initialize session state for storing responses
 if 'responses' not in st.session_state:
