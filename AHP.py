@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
-from io import StringIO
+from io import BytesIO, StringIO 
 import json
 
 # Initialize session state for storing responses
@@ -329,11 +329,12 @@ def main():
                 
                 # Download button for plot
                 st.write("### Download Grafik")
-                buffer = BytesIO()
-                plt.savefig(buffer, format="png", dpi=300, bbox_inches='tight')
+                # Menggunakan buffer baru untuk setiap grafik
+                plot_buffer = BytesIO()
+                plt.savefig(plot_buffer, format="png", dpi=300, bbox_inches='tight')
                 st.download_button(
                     label="📥 Download Grafik (PNG)",
-                    data=buffer.getvalue(),
+                    data=plot_buffer.getvalue(),
                     file_name="ahp_average_scores_plot.png",
                     mime="image/png",
                     help="Download grafik dalam format PNG"
