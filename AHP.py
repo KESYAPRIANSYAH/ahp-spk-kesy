@@ -265,26 +265,7 @@ def main():
     
     # Display all responses
     if st.session_state.responses:
-        # Add download buttons section at the top
-        st.write("### Download Data")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Download button for all responses
-            df_all = pd.DataFrame(st.session_state.responses)
-            # Convert numpy arrays to lists for JSON serialization
-            df_all['criteria_matrix'] = df_all['criteria_matrix'].apply(lambda x: np.array(x).tolist())
-            df_all['alternatives_matrix'] = df_all['alternatives_matrix'].apply(lambda x: np.array(x).tolist())
-            df_all['final_scores'] = df_all['final_scores'].apply(lambda x: np.array(x).tolist())
-            csv_all = df_all.to_csv(index=False)
-            st.download_button(
-                label="📥 Download Semua Data Responden",
-                data=csv_all,
-                file_name="ahp_all_responses.csv",
-                mime="text/csv",
-                help="Download semua data responden dalam format CSV"
-            )
-
+      
         # Display list of respondents
         st.write("### Daftar Responden:")
         for idx, resp in enumerate(st.session_state.responses):
