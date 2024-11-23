@@ -148,7 +148,7 @@ def main():
     st.header("Kalkulator AHP Untuk Menentukan Jenis Gamifikasi Pop-Up Campaign")
     
     # Add tabs for input and analysis
-    tab1,tab2 = st.tabs(["Input Data"])
+    tab1,tab2 = st.tabs(["Input Data","Analysis Responden"])
     
     with tab1:
         # Respondent Information
