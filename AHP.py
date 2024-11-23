@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
+from io import StringIO
 import json
 
 # Initialize session state for storing responses
@@ -136,7 +137,12 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     st.table(df_result[['Alternatif', 'Skor Akhir', 'Ranking']])
     
     return W
-
+def get_csv_download_link(df):
+    csv = df.to_csv(index=False)
+    # Create a binary stream
+    b64 = base64.b64encode(csv.encode()).decode()
+    href = f'data:file/csv;base64,{b64}'
+    return href
 def main():
     st.set_page_config(page_title="Kalkulator AHP Multi-Responden", page_icon=":bar_chart:")
     st.header("Kalkulator AHP Untuk Menentukan Jenis Gamifikasi Pop-Up Campaign")
@@ -257,48 +263,109 @@ def main():
 
                 
     
-    with tab2:
-        st.subheader("Analisis Multi-Responden")
+  with tab2:
+    st.subheader("Analisis Multi-Responden")
+    
+    # Display all responses
+    if st.session_state.responses:
+        # Add download buttons section at the top
+        st.write("### Download Data")
+        col1, col2 = st.columns(2)
         
-        # Display all responses
-        if st.session_state.responses:
-            st.write("### Daftar Responden:")
-            for idx, resp in enumerate(st.session_state.responses):
-                with st.expander(f"Responden: {resp['name']} - {resp['timestamp']}"):
-                    col1, col2 = st.columns([3,1])
-                    with col1:
-                        st.write("Skor Akhir:")
-                        df_result = pd.DataFrame({
-                            'Alternatif': resp['alternatives_list'],
-                            'Skor': resp['final_scores']
-                        })
-                        st.table(df_result)
-                    with col2:
-                        if st.button("Hapus Data", key=f"delete_{idx}"):
-                            delete_response(idx)
-                            st.experimental_rerun()
-            
-            # Calculate and display average scores
-            avg_scores = calculate_average_scores(st.session_state.responses, alternatives)
-            if avg_scores is not None and alternatives:
-                st.write("### Rata-rata Skor Semua Responden:")
-                df_avg = pd.DataFrame({
-                    'Alternatif': alternatives,
-                    'Rata-rata Skor': avg_scores
-                })
-                df_avg = df_avg.sort_values('Rata-rata Skor', ascending=False)
-                st.table(df_avg)
+        with col1:
+            # Download button for all responses
+            df_all = pd.DataFrame(st.session_state.responses)
+            # Convert numpy arrays to lists for JSON serialization
+            df_all['criteria_matrix'] = df_all['criteria_matrix'].apply(lambda x: np.array(x).tolist())
+            df_all['alternatives_matrix'] = df_all['alternatives_matrix'].apply(lambda x: np.array(x).tolist())
+            df_all['final_scores'] = df_all['final_scores'].apply(lambda x: np.array(x).tolist())
+            csv_all = df_all.to_csv(index=False)
+            st.download_button(
+                label="📥 Download Semua Data Responden",
+                data=csv_all,
+                file_name="ahp_all_responses.csv",
+                mime="text/csv",
+                help="Download semua data responden dalam format CSV"
+            )
+
+        # Display list of respondents
+        st.write("### Daftar Responden:")
+        for idx, resp in enumerate(st.session_state.responses):
+            with st.expander(f"Responden: {resp['name']} - {resp['timestamp']}"):
+                col1, col2 = st.columns([3,1])
+                with col1:
+                    st.write("Skor Akhir:")
+                    df_result = pd.DataFrame({
+                        'Alternatif': resp['alternatives_list'],
+                        'Skor': resp['final_scores']
+                    })
+                    st.table(df_result)
+                    
+                    # Download button for individual response
+                    individual_resp = pd.DataFrame([resp])
+                    individual_resp['criteria_matrix'] = individual_resp['criteria_matrix'].apply(lambda x: np.array(x).tolist())
+                    individual_resp['alternatives_matrix'] = individual_resp['alternatives_matrix'].apply(lambda x: np.array(x).tolist())
+                    individual_resp['final_scores'] = individual_resp['final_scores'].apply(lambda x: np.array(x).tolist())
+                    csv_individual = individual_resp.to_csv(index=False)
+                    st.download_button(
+                        label=f"📥 Download Data {resp['name']}",
+                        data=csv_individual,
+                        file_name=f"ahp_response_{resp['name'].lower().replace(' ', '_')}.csv",
+                        mime="text/csv"
+                    )
                 
-                # Plot average scores
-                fig, ax = plt.subplots()
-                ax.bar(df_avg['Alternatif'], df_avg['Rata-rata Skor'], color='#088eff')
-                ax.set_title("Rata-rata Skor Alternatif dari Semua Responden")
-                ax.set_xlabel("Alternatif")
-                ax.set_ylabel("Rata-rata Skor")
-                plt.xticks(rotation=45)
-                st.pyplot(fig)
-        else:
-            st.info("Belum ada data responden yang tersimpan.")
+                with col2:
+                    if st.button("Hapus Data", key=f"delete_{idx}"):
+                        delete_response(idx)
+                        st.experimental_rerun()
+        
+        # Calculate and display average scores
+        avg_scores = calculate_average_scores(st.session_state.responses, alternatives)
+        if avg_scores is not None and alternatives:
+            st.write("### Rata-rata Skor Semua Responden:")
+            df_avg = pd.DataFrame({
+                'Alternatif': alternatives,
+                'Rata-rata Skor': avg_scores
+            })
+            df_avg = df_avg.sort_values('Rata-rata Skor', ascending=False)
+            st.table(df_avg)
+            
+            # Download button for average scores
+            csv_avg = df_avg.to_csv(index=False)
+            st.download_button(
+                label="📥 Download Rata-rata Skor",
+                data=csv_avg,
+                file_name="ahp_average_scores.csv",
+                mime="text/csv",
+                help="Download rata-rata skor dalam format CSV"
+            )
+            
+            # Plot average scores
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.bar(df_avg['Alternatif'], df_avg['Rata-rata Skor'], color='#088eff')
+            ax.set_title("Rata-rata Skor Alternatif dari Semua Responden")
+            ax.set_xlabel("Alternatif")
+            ax.set_ylabel("Rata-rata Skor")
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+            # Download button for plot
+            st.write("### Download Grafik")
+            # Save plot to bytes
+            from io import BytesIO
+            buf = BytesIO()
+            plt.savefig(buf, format="png", dpi=300, bbox_inches='tight')
+            st.download_button(
+                label="📥 Download Grafik (PNG)",
+                data=buf.getvalue(),
+                file_name="ahp_average_scores_plot.png",
+                mime="image/png",
+                help="Download grafik dalam format PNG"
+            )
+            
+    else:
+        st.info("Belum ada data responden yang tersimpan.")
 
 if __name__ == '__main__':
     main()
