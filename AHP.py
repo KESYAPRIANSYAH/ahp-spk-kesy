@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
-from io import StringIO
+from io import BytesIO, StringIO
 import json
 
 # Initialize session state for storing responses
@@ -296,46 +296,46 @@ def main():
         
         # Calculate and display average scores
         avg_scores = calculate_average_scores(st.session_state.responses, alternatives)
-        if avg_scores is not None and alternatives:
-            st.write("### Rata-rata Skor Semua Responden:")
-            df_avg = pd.DataFrame({
-                'Alternatif': alternatives,
-                'Rata-rata Skor': avg_scores
-            })
-            df_avg = df_avg.sort_values('Rata-rata Skor', ascending=False)
-            st.table(df_avg)
-            
-            # Download button for average scores
-            csv_avg = df_avg.to_csv(index=False)
-            st.download_button(
-                label="📥 Download Rata-rata Skor",
-                data=csv_avg,
-                file_name="ahp_average_scores.csv",
-                mime="text/csv",
-                help="Download rata-rata skor dalam format CSV"
-            )
-            
-            # Plot average scores
-            fig, ax = plt.subplots(figsize=(10, 6))
-            ax.bar(df_avg['Alternatif'], df_avg['Rata-rata Skor'], color='#088eff')
-            ax.set_title("Rata-rata Skor Alternatif dari Semua Responden")
-            ax.set_xlabel("Alternatif")
-            ax.set_ylabel("Rata-rata Skor")
-            plt.xticks(rotation=45)
-            plt.tight_layout()
-            st.pyplot(fig)
-            
-            # Download button for plot
-            st.write("### Download Grafik")
-            buf = BytesIO()
-            plt.savefig(buf, format="png", dpi=300, bbox_inches='tight')
-            st.download_button(
-                label="📥 Download Grafik (PNG)",
-                data=buf.getvalue(),
-                file_name="ahp_average_scores_plot.png",
-                mime="image/png",
-                help="Download grafik dalam format PNG"
-            )
+       if avg_scores is not None and alternatives:
+    st.write("### Rata-rata Skor Semua Responden:")
+    df_avg = pd.DataFrame({
+        'Alternatif': alternatives,
+        'Rata-rata Skor': avg_scores
+    })
+    df_avg = df_avg.sort_values('Rata-rata Skor', ascending=False)
+    st.table(df_avg)
+    
+    # Download button for average scores
+    csv_avg = df_avg.to_csv(index=False)
+    st.download_button(
+        label="📥 Download Rata-rata Skor",
+        data=csv_avg,
+        file_name="ahp_average_scores.csv",
+        mime="text/csv",
+        help="Download rata-rata skor dalam format CSV"
+    )
+    
+    # Plot average scores
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.bar(df_avg['Alternatif'], df_avg['Rata-rata Skor'], color='#088eff')
+    ax.set_title("Rata-rata Skor Alternatif dari Semua Responden")
+    ax.set_xlabel("Alternatif")
+    ax.set_ylabel("Rata-rata Skor")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    st.pyplot(fig)
+    
+    # Download button for plot
+    st.write("### Download Grafik")
+    buffer = BytesIO()
+    plt.savefig(buffer, format="png", dpi=300, bbox_inches='tight')
+    st.download_button(
+        label="📥 Download Grafik (PNG)",
+        data=buffer.getvalue(),
+        file_name="ahp_average_scores_plot.png",
+        mime="image/png",
+        help="Download grafik dalam format PNG"
+    )
     else:
         st.info("Belum ada data responden yang tersimpan.")
 
