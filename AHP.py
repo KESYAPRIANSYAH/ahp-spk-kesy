@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
-from io import BytesIO, StringIO
+from io import StringIO
 import json
 
 # Initialize session state for storing responses
@@ -147,122 +147,126 @@ def main():
     st.set_page_config(page_title="Kalkulator AHP Multi-Responden", page_icon=":bar_chart:")
     st.header("Kalkulator AHP Untuk Menentukan Jenis Gamifikasi Pop-Up Campaign")
     
-    # Respondent Information Section
-    st.subheader("Informasi Responden")
-    name = st.text_input("Nama Lengkap")
+    # Add tabs for input and analysis
+  
+    tab1,tab2 = st.tabs(["Input Data", "Analisis Responden"])
     
-    st.sidebar.title("Kriteria & Alternatif")
-    
-    # Instructions in sidebar
-    st.sidebar.info("""
-    ### Petunjuk Pengisian AHP
-    
-    Untuk mendapatkan hasil yang optimal dan konsisten, harap perhatikan langkah-langkah berikut saat mengisi nilai perbandingan:
-    
-    1. Masukkan Input Metrik dan Nama Jenis Gamifikasi dengan tanda , misal CTR, CR , IMPRESSION 
-    2. **Konsistensi**: Jika Kriteria A lebih penting dari Kriteria B, dan Kriteria B lebih penting dari Kriteria C, maka Kriteria A seharusnya jauh lebih penting daripada Kriteria C.
-    
-    3. **Skala Pengisian**: Gunakan skala **1 hingga 9**:
-       - 1: Sama penting
-       - 3: Sedikit lebih penting
-       - 5: Lebih penting
-       - 7: Sangat lebih penting
-       - 9: Mutlak lebih penting
-    
-    4. **Perbandingan Simetris**: Jika Anda menilai Kriteria A lebih penting daripada Kriteria B, maka sebaliknya, nilai Kriteria B terhadap Kriteria A harus otomatis terbalik.
-       ### Penggunaan Nilai 2, 4, 6, dan 8:
-    - **Nilai 2**: Kriteria A sedikit lebih penting dari Kriteria B.
-    - **Nilai 4**: Kriteria A lebih penting dari Kriteria B, tetapi tidak terlalu jauh.
-    - **Nilai 6**: Kriteria A cukup lebih penting dari Kriteria B.
-    - **Nilai 8**: Kriteria A sangat lebih penting dibandingkan Kriteria B.                 
-    """)
-    
-    cri = st.sidebar.text_input("Masukkan Kriteria Metrik")
-    alt = st.sidebar.text_input("Masukkan Alternatif Jenis Gamifikasi")
-    criterias = cri.split(",") if cri else []
-    alternatives = alt.split(",") if alt else []
+    with tab1:
+        # Respondent Information
+        st.subheader("Informasi Responden")
+        name = st.text_input("Nama Lengkap")
+       
+        
+        st.sidebar.title("Kriteria & Alternatif")
+        
+        # Instructions in sidebar
+        st.sidebar.info("""
+        ### Petunjuk Pengisian AHP
+        
+        Untuk mendapatkan hasil yang optimal dan konsisten, harap perhatikan langkah-langkah berikut saat mengisi nilai perbandingan:
+        
+        1. Masukkan Input Metrik dan Nama Jenis Gamifikasi dengan tanda , misal CTR, CR , IMPRESSION 
+        2. **Konsistensi**: Jika Kriteria A lebih penting dari Kriteria B, dan Kriteria B lebih penting dari Kriteria C, maka Kriteria A seharusnya jauh lebih penting daripada Kriteria C.
+        
+        3. **Skala Pengisian**: Gunakan skala **1 hingga 9**:
+           - 1: Sama penting
+           - 3: Sedikit lebih penting
+           - 5: Lebih penting
+           - 7: Sangat lebih penting
+           - 9: Mutlak lebih penting
+        
+        4. **Perbandingan Simetris**: Jika Anda menilai Kriteria A lebih penting daripada Kriteria B, maka sebaliknya, nilai Kriteria B terhadap Kriteria A harus otomatis terbalik.
+           ### Penggunaan Nilai 2, 4, 6, dan 8:
+        - **Nilai 2**: Kriteria A sedikit lebih penting dari Kriteria B.
+        - **Nilai 4**: Kriteria A lebih penting dari Kriteria B, tetapi tidak terlalu jauh.
+        - **Nilai 6**: Kriteria A cukup lebih penting dari Kriteria B.
+        - **Nilai 8**: Kriteria A sangat lebih penting dibandingkan Kriteria B.                 
+        """)
+        
+        cri = st.sidebar.text_input("Masukkan Kriteria Metrik")
+        alt = st.sidebar.text_input("Masukkan Alternatif Jenis Gamifikasi")
+        criterias = cri.split(",") if cri else []
+        alternatives = alt.split(",") if alt else []
 
-    if cri and alt and name:
-        with st.expander("Input Bobot Kriteria"):
-            st.subheader("Perbandingan Berpasangan untuk Kriteria")
-            n = len(criterias)
-            A = np.zeros((n, n))
+        if cri and alt and name :
+            with st.expander("Bobot Kriteria"):
+                st.subheader("Perbandingan Berpasangan untuk Kriteria")
+                n = len(criterias)
+                A = np.zeros((n, n))
 
-            # Your existing criteria input code...
-            for i in range(n):
-                for j in range(i, n):
-                    if i == j:
-                        A[i][j] = 1
-                    else:
-                        st.markdown(f" ##### Kriteria {criterias[i]} dibandingkan dengan Kriteria {criterias[j]}")
-                        criteriaradio = st.radio(
-                            "Pilih kriteria yang lebih prioritas ",
-                            (criterias[i], criterias[j]),
-                            key=f"crit_{i}_{j}",
-                            horizontal=True
-                        )
-
-                        if criteriaradio == criterias[i]:
-                            A[i][j] = st.slider(
-                                f"Seberapa jauh {criterias[i]} lebih penting dibandingkan {criterias[j]} ?",
-                                1, 9, 1, key=f"crit_slider_{i}_{j}"
-                            )
-                            A[j][i] = float(1/A[i][j])
-                        else:
-                            A[j][i] = st.slider(
-                                f"Seberapa jauh {criterias[j]} lebih penting dibandingkan {criterias[i]} ?",
-                                1, 9, 1, key=f"crit_slider_{j}_{i}"
-                            )
-                            A[i][j] = float(1/A[j][i])
-
-        with st.expander("Input Bobot Alternatif"):
-            st.subheader("Perbandingan Berpasangan untuk Alternatif")
-            m = len(alternatives)
-            B = np.zeros((n, m, m))
-
-            # Your existing alternatives input code...
-            for k in range(n):
-                st.write("---")
-                st.markdown(f" ##### Perbandingan Alternatif untuk Kriteria {criterias[k]}")
-
-                for i in range(m):
-                    for j in range(i, m):
+                for i in range(n):
+                    for j in range(i, n):
                         if i == j:
-                            B[k][i][j] = 1
+                            A[i][j] = 1
                         else:
-                            alternativeradio = st.radio(
-                                f"Pilih alternatif yang lebih prioritas untuk kriteria {criterias[k]}",
-                                (alternatives[i], alternatives[j]),
-                                key=f"alt_{k}_{i}_{j}",
+                            st.markdown(f" ##### Kriteria {criterias[i]} dibandingkan dengan Kriteria {criterias[j]}")
+                            criteriaradio = st.radio(
+                                "Pilih kriteria yang lebih prioritas ",
+                                (criterias[i], criterias[j]),
+                                key=f"crit_{i}_{j}",
                                 horizontal=True
                             )
 
-                            if alternativeradio == alternatives[i]:
-                                B[k][i][j] = st.slider(
-                                    f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[i]} lebih baik dibandingkan {alternatives[j]} ?",
-                                    1, 9, 1, key=f"alt_slider_{k}_{i}_{j}"
+                            if criteriaradio == criterias[i]:
+                                A[i][j] = st.slider(
+                                    f"Seberapa jauh {criterias[i]} lebih penting dibandingkan {criterias[j]} ?",
+                                    1, 9, 1, key=f"crit_slider_{i}_{j}"
                                 )
-                                B[k][j][i] = float(1/B[k][i][j])
+                                A[j][i] = float(1/A[i][j])
                             else:
-                                B[k][j][i] = st.slider(
-                                    f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[j]} lebih baik dibandingkan {alternatives[i]} ?",
-                                    1, 9, 1, key=f"alt_slider_{k}_{j}_{i}"
+                                A[j][i] = st.slider(
+                                    f"Seberapa jauh {criterias[j]} lebih penting dibandingkan {criterias[i]} ?",
+                                    1, 9, 1, key=f"crit_slider_{j}_{i}"
                                 )
-                                B[k][i][j] = float(1/B[k][j][i])
+                                A[i][j] = float(1/A[j][i])
 
-        btn = st.button("Hitung dan Simpan AHP")
-        st.write("##")
+            with st.expander("Bobot Alternatif"):
+                st.subheader("Perbandingan Berpasangan untuk Alternatif")
+                m = len(alternatives)
+                B = np.zeros((n, m, m))
 
-        if btn:
-            W = calculate_ahp(A, B, n, m, criterias, alternatives)
-            save_response(name, A, B, criterias, alternatives, W)
-            st.success("Data berhasil disimpan!")
+                for k in range(n):
+                    st.write("---")
+                    st.markdown(f" ##### Perbandingan Alternatif untuk Kriteria {criterias[k]}")
 
-    # Analysis Section (former tab2 content)
-    st.markdown("---")
-    st.subheader("Analisis Multi-Responden")
+                    for i in range(m):
+                        for j in range(i, m):
+                            if i == j:
+                                B[k][i][j] = 1
+                            else:
+                                alternativeradio = st.radio(
+                                    f"Pilih alternatif yang lebih prioritas untuk kriteria {criterias[k]}",
+                                    (alternatives[i], alternatives[j]),
+                                    key=f"alt_{k}_{i}_{j}",
+                                    horizontal=True
+                                )
+
+                                if alternativeradio == alternatives[i]:
+                                    B[k][i][j] = st.slider(
+                                        f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[i]} lebih baik dibandingkan {alternatives[j]} ?",
+                                        1, 9, 1, key=f"alt_slider_{k}_{i}_{j}"
+                                    )
+                                    B[k][j][i] = float(1/B[k][i][j])
+                                else:
+                                    B[k][j][i] = st.slider(
+                                        f"Dengan mempertimbangkan Kriteria {criterias[k]}, seberapa jauh {alternatives[j]} lebih baik dibandingkan {alternatives[i]} ?",
+                                        1, 9, 1, key=f"alt_slider_{k}_{j}_{i}"
+                                    )
+                                    B[k][i][j] = float(1/B[k][j][i])
+
+            btn = st.button("Hitung dan Simpan AHP")
+            st.write("##")
+
+            if btn:
+                W = calculate_ahp(A, B, n, m, criterias, alternatives)
+                save_response(name, A, B, criterias, alternatives, W)
+                st.success("Data berhasil disimpan!")
+    with tab2: 
+        st.subheader("Analisis Multi-Responden")
     
+    # Display all responses
     if st.session_state.responses:
+      
         # Display list of respondents
         st.write("### Daftar Responden:")
         for idx, resp in enumerate(st.session_state.responses):
@@ -296,48 +300,50 @@ def main():
         
         # Calculate and display average scores
         avg_scores = calculate_average_scores(st.session_state.responses, alternatives)
-       # Dalam fungsi main(), bagian kode yang menggunakan BytesIO
-if avg_scores is not None and alternatives:
-    st.write("### Rata-rata Skor Semua Responden:")
-    df_avg = pd.DataFrame({
-        'Alternatif': alternatives,
-        'Rata-rata Skor': avg_scores
-    })
-    df_avg = df_avg.sort_values('Rata-rata Skor', ascending=False)
-    st.table(df_avg)
-    
-    # Download button for average scores
-    csv_avg = df_avg.to_csv(index=False)
-    st.download_button(
-        label="📥 Download Rata-rata Skor",
-        data=csv_avg,
-        file_name="ahp_average_scores.csv",
-        mime="text/csv",
-        help="Download rata-rata skor dalam format CSV"
-    )
-    
-    # Plot average scores
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.bar(df_avg['Alternatif'], df_avg['Rata-rata Skor'], color='#088eff')
-    ax.set_title("Rata-rata Skor Alternatif dari Semua Responden")
-    ax.set_xlabel("Alternatif")
-    ax.set_ylabel("Rata-rata Skor")
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    st.pyplot(fig)
-    
-    # Download button for plot
-    st.write("### Download Grafik")
-    buffer = BytesIO()
-    plt.savefig(buffer, format="png", dpi=300, bbox_inches='tight')
-    st.download_button(
-        label="📥 Download Grafik (PNG)",
-        data=buffer.getvalue(),
-        file_name="ahp_average_scores_plot.png",
-        mime="image/png",
-        help="Download grafik dalam format PNG"
-    )
-else:
+        if avg_scores is not None and alternatives:
+            st.write("### Rata-rata Skor Semua Responden:")
+            df_avg = pd.DataFrame({
+                'Alternatif': alternatives,
+                'Rata-rata Skor': avg_scores
+            })
+            df_avg = df_avg.sort_values('Rata-rata Skor', ascending=False)
+            st.table(df_avg)
+            
+            # Download button for average scores
+            csv_avg = df_avg.to_csv(index=False)
+            st.download_button(
+                label="📥 Download Rata-rata Skor",
+                data=csv_avg,
+                file_name="ahp_average_scores.csv",
+                mime="text/csv",
+                help="Download rata-rata skor dalam format CSV"
+            )
+            
+            # Plot average scores
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.bar(df_avg['Alternatif'], df_avg['Rata-rata Skor'], color='#088eff')
+            ax.set_title("Rata-rata Skor Alternatif dari Semua Responden")
+            ax.set_xlabel("Alternatif")
+            ax.set_ylabel("Rata-rata Skor")
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            st.pyplot(fig)
+            
+            # Download button for plot
+            st.write("### Download Grafik")
+            # Save plot to bytes
+            from io import BytesIO
+            buf = BytesIO()
+            plt.savefig(buf, format="png", dpi=300, bbox_inches='tight')
+            st.download_button(
+                label="📥 Download Grafik (PNG)",
+                data=buf.getvalue(),
+                file_name="ahp_average_scores_plot.png",
+                mime="image/png",
+                help="Download grafik dalam format PNG"
+            )
+            
+    else:
         st.info("Belum ada data responden yang tersimpan.")
 
 if __name__ == '__main__':
