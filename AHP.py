@@ -296,7 +296,8 @@ def main():
         
         # Calculate and display average scores
         avg_scores = calculate_average_scores(st.session_state.responses, alternatives)
-       if avg_scores is not None and alternatives:
+       # Dalam fungsi main(), bagian kode yang menggunakan BytesIO
+if avg_scores is not None and alternatives:
     st.write("### Rata-rata Skor Semua Responden:")
     df_avg = pd.DataFrame({
         'Alternatif': alternatives,
@@ -336,7 +337,7 @@ def main():
         mime="image/png",
         help="Download grafik dalam format PNG"
     )
-    else:
+else:
         st.info("Belum ada data responden yang tersimpan.")
 
 if __name__ == '__main__':
