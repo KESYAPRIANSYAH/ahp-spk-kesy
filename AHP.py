@@ -297,6 +297,8 @@ def main():
                             st.experimental_rerun()
             
             # Calculate and display average scores
+          
+          # Calculate and display average scores
             avg_scores = calculate_average_scores(st.session_state.responses, alternatives)
             if avg_scores is not None and alternatives:
                 st.write("### Rata-rata Skor Semua Responden:")
@@ -304,8 +306,12 @@ def main():
                     'Alternatif': alternatives,
                     'Rata-rata Skor': avg_scores
                 })
-                df_avg = df_avg.sort_values('Rata-rata Skor', ascending=False)
-                st.table(df_avg)
+                # Sort and add ranking
+                df_avg = df_avg.sort_values('Rata-rata Skor', ascending=False).reset_index(drop=True)
+                df_avg['Ranking'] = df_avg['Rata-rata Skor'].rank(ascending=False).astype(int)
+                
+                # Display table with ranking
+                st.table(df_avg[['Alternatif', 'Rata-rata Skor', 'Ranking']])
                 
                 # Download button for average scores
                 csv_avg = df_avg.to_csv(index=False)
@@ -319,7 +325,15 @@ def main():
                 
                 # Plot average scores
                 fig, ax = plt.subplots(figsize=(10, 6))
-                ax.bar(df_avg['Alternatif'], df_avg['Rata-rata Skor'], color='#088eff')
+                bars = ax.bar(df_avg['Alternatif'], df_avg['Rata-rata Skor'], color='#088eff')
+                
+                # Add ranking labels on top of bars
+                for idx, bar in enumerate(bars):
+                    height = bar.get_height()
+                    ax.text(bar.get_x() + bar.get_width()/2., height,
+                           f'Rank {df_avg.iloc[idx]["Ranking"]}',
+                           ha='center', va='bottom')
+                
                 ax.set_title("Rata-rata Skor Alternatif dari Semua Responden")
                 ax.set_xlabel("Alternatif")
                 ax.set_ylabel("Rata-rata Skor")
