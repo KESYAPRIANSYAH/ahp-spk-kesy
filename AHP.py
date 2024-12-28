@@ -1,10 +1,9 @@
-import base64
 import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
-from io import BytesIO, StringIO
+from io import BytesIO, StringIO 
 import json
 
 # Initialize session state for storing responses
@@ -107,19 +106,19 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
         for i in range(m):
             for j in range(i, m):
                 if i != j:
-                    B[k][i][j] = float(1 / B[k][i][j])
+                    B[k][j][i] = float(1 / B[k][i][j])
     st.write("---")
 
     for i in range(n):
         dfB = pd.DataFrame(B[i], index=alternatives, columns=alternatives)
-        st.markdown(f" #### Alternative for Criteria {criterias[i]}")
+        st.markdown(f" #### Alternatives for Criterion {criterias[i]}")
         st.table(dfB)
 
     W2 = get_weight(A, "Criteria", criterias)
     W3 = np.zeros((n, m))
 
     for i in range(n):
-        w3 = get_weight(B[i], f"Alternative for Criteria {criterias[i]}", alternatives)
+        w3 = get_weight(B[i], f"Alternatives for Criterion {criterias[i]}", alternatives)
         W3[i] = w3
 
     W = np.dot(W2, W3)
@@ -128,25 +127,20 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
     df_result = df_result.sort_values('Final Score', ascending=False).reset_index(drop=True)
     df_result['Ranking'] = df_result['Final Score'].rank(ascending=False).astype(int)
 
-    # Plot AHP results graph
+    # Plot AHP results
     st.pyplot(plot_graph(W2, criterias, "Criteria", "Criteria Weights"))
-    st.pyplot(plot_graph(W, alternatives, "Alternatives", "Optimal Alternatives for Given Criteria"))
+    st.pyplot(plot_graph(W, alternatives, "Alternatives", "Optimal Alternative for Given Criteria"))
     st.balloons()
 
-    # Display final results with ranking
+    # Display Final Results with Ranking
     st.write("### Final AHP Results with Ranking:")
     st.table(df_result[['Alternative', 'Final Score', 'Ranking']])
     
     return W
-def get_csv_download_link(df):
-    csv = df.to_csv(index=False)
-    # Create a binary stream
-    b64 = base64.b64encode(csv.encode()).decode()
-    href = f'data:file/csv;base64,{b64}'
-    return href
+
 def main():
-    st.set_page_config(page_title="Multi-Respondent AHP Calculator", page_icon=":bar_chart:")
-    st.header("AHP Calculator to Determine the Type of Pop-Up Campaign Gamification")
+    st.set_page_config(page_title="AHP Multi-Respondent Calculator", page_icon=":bar_chart:")
+    st.header("AHP Calculator to Determine Gamification Types for Pop-Up Campaign")
     
     # Add tabs for input and analysis
     tab1, tab2 = st.tabs(["Input Data", "Respondent Analysis"])
@@ -162,34 +156,35 @@ def main():
         st.sidebar.info("""
         ### AHP Filling Instructions
         
-        To obtain optimal and consistent results, please pay attention to the following steps when filling in the comparison values:
+        To obtain optimal and consistent results, please follow these steps when filling in comparison values:
         
-        1. Enter the Metric Input and Gamification Type Name with the sign, for example CTR, CR, IMPRESSION 
+        1. Enter metrics and gamification types separated by a comma, e.g., CTR, CR, IMPRESSION.
         2. **Consistency**: If Criterion A is more important than Criterion B, and Criterion B is more important than Criterion C, then Criterion A should be much more important than Criterion C.
         
         3. **Filling Scale**: Use a scale of **1 to 9**:
            - 1: Equally important
-           - 3: A little more important
+           - 3: Slightly more important
            - 5: More important
            - 7: Much more important
            - 9: Absolutely more important
         
-        4. **Symmetric Comparison**: If you rate Criterion A as more important than Criterion B, then vice versa, the value of Criterion B relative to Criterion A should be automatically reversed.
-           ### Use of Values ​​2, 4, 6, and 8:
-        - **Grade 2**: Criterion A is slightly more important than Criterion B.
-        - **Score 4**: Criterion A is more important than Criterion B, but not by much.
-        - **Score 6**: Criterion A is moderately more important than Criterion B.
-        - **Score 8**: Criterion A is very more important than Criterion B.                 
+        4. **Symmetric Comparison**: If you rate Criterion A as more important than Criterion B, the inverse should automatically apply for Criterion B compared to Criterion A.
+
+        ### Usage of Values 2, 4, 6, and 8:
+        - **Value 2**: Criterion A is slightly more important than Criterion B.
+        - **Value 4**: Criterion A is more important than Criterion B, but not significantly.
+        - **Value 6**: Criterion A is considerably more important than Criterion B.
+        - **Value 8**: Criterion A is very much more important than Criterion B.
         """)
         
-        cri = st.sidebar.text_input("Enter Metric Criteria")
-        alt = st.sidebar.text_input("Enter Alternative Types of Gamification")
+        cri = st.sidebar.text_input("Enter Criteria Metrics")
+        alt = st.sidebar.text_input("Enter Gamification Alternatives")
         criterias = cri.split(",") if cri else []
         alternatives = alt.split(",") if alt else []
 
         if cri and alt and name:
-            with st.expander("Criteria Weight"):
-                st.subheader("Pairwise Comparisons for Criteria")
+            with st.expander("Criteria Weights"):
+                st.subheader("Pairwise Comparison for Criteria")
                 n = len(criterias)
                 A = np.zeros((n, n))
 
@@ -212,75 +207,147 @@ def main():
                                     1, 9, 1, key=f"crit_slider_{i}_{j}"
                                 )
                                 A[j][i] = float(1/A[i][j])
-
-
                             else:
                                 A[j][i] = st.slider(
                                     f"How much more important is {criterias[j]} compared to {criterias[i]}?",
-                                    1, 9, 1, key=f"crit_slider_{i}_{j}"
+                                    1, 9, 1, key=f"crit_slider_{j}_{i}"
                                 )
                                 A[i][j] = float(1/A[j][i])
-            
-            with st.expander("Alternatives Weight"):
-                st.subheader("Pairwise Comparisons for Alternatives")
+
+            with st.expander("Alternative Weights"):
+                st.subheader("Pairwise Comparison for Alternatives")
                 m = len(alternatives)
                 B = np.zeros((n, m, m))
+
                 for k in range(n):
-                    st.markdown(f" ##### {criterias[k]} Criteria ")
+                    st.write("---")
+                    st.markdown(f" ##### Comparison of Alternatives for Criterion {criterias[k]}")
+
                     for i in range(m):
                         for j in range(i, m):
                             if i == j:
                                 B[k][i][j] = 1
                             else:
-                                st.markdown(f"Alternative {alternatives[i]} compared to {alternatives[j]}")
-                                alternativesradio = st.radio(
-                                    "Select the more prioritized alternative",
+                                alternativeradio = st.radio(
+                                    f"Select the more prioritized alternative for Criterion {criterias[k]}",
                                     (alternatives[i], alternatives[j]),
-                                    key=f"alt_{i}_{j}_{k}",
+                                    key=f"alt_{k}_{i}_{j}",
                                     horizontal=True
                                 )
 
-                                if alternativesradio == alternatives[i]:
+                                if alternativeradio == alternatives[i]:
                                     B[k][i][j] = st.slider(
-                                        f"How much more important is {alternatives[i]} compared to {alternatives[j]}?",
-                                        1, 9, 1, key=f"alt_slider_{i}_{j}_{k}"
+                                        f"Considering Criterion {criterias[k]}, how much better is {alternatives[i]} compared to {alternatives[j]}?",
+                                        1, 9, 1, key=f"alt_slider_{k}_{i}_{j}"
                                     )
                                     B[k][j][i] = float(1/B[k][i][j])
                                 else:
                                     B[k][j][i] = st.slider(
-                                        f"How much more important is {alternatives[j]} compared to {alternatives[i]}?",
-                                        1, 9, 1, key=f"alt_slider_{i}_{j}_{k}"
+                                        f"Considering Criterion {criterias[k]}, how much better is {alternatives[j]} compared to {alternatives[i]}?",
+                                        1, 9, 1, key=f"alt_slider_{k}_{j}_{i}"
                                     )
                                     B[k][i][j] = float(1/B[k][j][i])
 
-            if st.button("Calculate and Save Result"):
-                # Perform AHP calculation and save response
+            btn = st.button("Calculate and Save AHP")
+            st.write("##")
+
+            if btn:
                 W = calculate_ahp(A, B, n, m, criterias, alternatives)
                 save_response(name, A, B, criterias, alternatives, W)
-                st.success("Calculation and Result saved successfully!")
-
+                st.success("Data successfully saved!")
+    
     with tab2:
-        st.subheader("Respondent Data Analysis")
-
-        # Display stored responses
+        st.subheader("Multi-Respondent Analysis")
+        
         if st.session_state.responses:
-            df_responses = pd.DataFrame(st.session_state.responses)
-            st.write("### All Respondents' Results")
-            st.write(df_responses[['name', 'timestamp', 'final_scores']])
+            # Display list of respondents
+            st.write("### Respondent List:")
+            for idx, resp in enumerate(st.session_state.responses):
+                with st.expander(f"Respondent: {resp['name']} - {resp['timestamp']}"):
+                    col1, col2 = st.columns([3,1])
+                    with col1:
+                        st.write("Final Scores:")
+                        df_result = pd.DataFrame({
+                            'Alternative': resp['alternatives_list'],
+                            'Score': resp['final_scores']
+                        })
+                        st.table(df_result)
+                        
+                        # Download button for individual response
+                        individual_resp = pd.DataFrame([resp])
+                        individual_resp['criteria_matrix'] = individual_resp['criteria_matrix'].apply(lambda x: np.array(x).tolist())
+                        individual_resp['alternatives_matrix'] = individual_resp['alternatives_matrix'].apply(lambda x: np.array(x).tolist())
+                        individual_resp['final_scores'] = individual_resp['final_scores'].apply(lambda x: np.array(x).tolist())
+                        csv_individual = individual_resp.to_csv(index=False)
+                        st.download_button(
+                            label=f"📥 Download Data {resp['name']}",
+                            data=csv_individual,
+                            file_name=f"ahp_response_{resp['name'].lower().replace(' ', '_')}.csv",
+                            mime="text/csv"
+                        )
+                    
+                    with col2:
+                        if st.button("Delete Data", key=f"delete_{idx}"):
+                            delete_response(idx)
+                            st.experimental_rerun()
             
-            # Display average scores
+            # Calculate and display average scores
             avg_scores = calculate_average_scores(st.session_state.responses, alternatives)
-            if avg_scores is not None:
-                st.write("### Average Scores Across All Respondents")
-                st.write(pd.DataFrame({"Alternatives": alternatives, "Average Score": avg_scores}))
-            
-            delete_idx = st.number_input("Enter index to delete response", min_value=0, max_value=len(st.session_state.responses)-1, step=1)
-            if st.button("Delete Response"):
-                delete_response(delete_idx)
-                st.success("Response deleted successfully.")
+            if avg_scores is not None and alternatives:
+                st.write("### Average Scores Across All Respondents:")
+                df_avg = pd.DataFrame({
+                    'Alternative': alternatives,
+                    'Average Score': avg_scores
+                })
+                # Sort and add ranking
+                df_avg = df_avg.sort_values('Average Score', ascending=False).reset_index(drop=True)
+                df_avg['Ranking'] = df_avg['Average Score'].rank(ascending=False).astype(int)
+                
+                # Display table with ranking
+                st.table(df_avg[['Alternative', 'Average Score', 'Ranking']])
+                
+                # Download button for average scores
+                csv_avg = df_avg.to_csv(index=False)
+                st.download_button(
+                    label="📥 Download Average Scores",
+                    data=csv_avg,
+                    file_name="ahp_average_scores.csv",
+                    mime="text/csv",
+                    help="Download average scores in CSV format"
+                )
+                
+                # Plot average scores
+                fig, ax = plt.subplots(figsize=(10, 6))
+                bars = ax.bar(df_avg['Alternative'], df_avg['Average Score'], color='#088eff')
+                
+                # Add ranking labels on top of bars
+                for idx, bar in enumerate(bars):
+                    height = bar.get_height()
+                    ax.text(bar.get_x() + bar.get_width()/2., height,
+                           f'Rank {df_avg.iloc[idx]["Ranking"]}',
+                           ha='center', va='bottom')
+                
+                ax.set_title("Average Scores of Alternatives Across All Respondents")
+                ax.set_xlabel("Alternative")
+                ax.set_ylabel("Average Score")
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                st.pyplot(fig)
+                
+                # Download button for plot
+                st.write("### Download Plot")
+                # Use a new buffer for each plot
+                plot_buffer = BytesIO()
+                plt.savefig(plot_buffer, format="png", dpi=300, bbox_inches='tight')
+                st.download_button(
+                    label="📥 Download Plot (PNG)",
+                    data=plot_buffer.getvalue(),
+                    file_name="ahp_average_scores_plot.png",
+                    mime="image/png",
+                    help="Download plot in PNG format"
+                )
         else:
-            st.write("No responses yet.")
+            st.info("No respondent data saved yet.")
 
-# Run the main function
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
