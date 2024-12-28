@@ -100,7 +100,7 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
             if i != j:
                 A[j][i] = float(1 / A[i][j])
     dfA = pd.DataFrame(A, index=criterias, columns=criterias)
-    st.markdown(" #### Criteria Table")
+    st.markdown(" #### Criteria")
     st.table(dfA)
 
     for k in range(n):
@@ -112,14 +112,14 @@ def calculate_ahp(A, B, n, m, criterias, alternatives):
 
     for i in range(n):
         dfB = pd.DataFrame(B[i], index=alternatives, columns=alternatives)
-        st.markdown(f" #### Alternative Table for Criteria {criterias[i]}")
+        st.markdown(f" #### Alternative for Criteria {criterias[i]}")
         st.table(dfB)
 
-    W2 = get_weight(A, "Criteria Table", criterias)
+    W2 = get_weight(A, "Criteria", criterias)
     W3 = np.zeros((n, m))
 
     for i in range(n):
-        w3 = get_weight(B[i], f"Alternative Table for Criteria {criterias[i]}", alternatives)
+        w3 = get_weight(B[i], f"Alternative for Criteria {criterias[i]}", alternatives)
         W3[i] = w3
 
     W = np.dot(W2, W3)
